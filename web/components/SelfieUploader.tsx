@@ -40,7 +40,11 @@ export function SelfieUploader({ slug }: { slug: string }) {
   function toggle(photoId: string) {
     setSelected((prev) => {
       const next = new Set(prev)
-      next.has(photoId) ? next.delete(photoId) : next.add(photoId)
+      if (next.has(photoId)) {
+        next.delete(photoId)
+      } else {
+        next.add(photoId)
+      }
       return next
     })
   }
