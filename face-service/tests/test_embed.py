@@ -26,3 +26,11 @@ def test_embed_returns_empty_list_when_no_face():
 
     assert response.status_code == 200
     assert response.json()["faces"] == []
+
+def test_embed_returns_400_for_malformed_image():
+    response = client.post(
+        "/embed",
+        files={"image": ("not_an_image.jpg", b"this is not image data", "image/jpeg")},
+    )
+
+    assert response.status_code == 400
