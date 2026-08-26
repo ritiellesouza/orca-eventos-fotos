@@ -16,15 +16,25 @@ export function SelfieUploader({ slug }: { slug: string }) {
     const formData = new FormData()
     formData.append('selfie', file)
 
-    const response = await fetch(`/api/events/${slug}/search`, { method: 'POST', body: formData })
-    const data = await response.json()
+    try {
+      const response = await fetch(`/api/events/${slug}/search`, { method: 'POST', body: formData })
 
-    if (!response.ok) {
-      setError(data.error === 'no_face_detected' ? 'Não achamos um rosto nessa foto. Tente outra, com boa iluminação.' : 'Erro ao buscar fotos.')
-      return
+      let data: { error?: string; results?: PhotoResult[] } | null = null
+      try {
+        data = await response.json()
+      } catch {
+        data = null
+      }
+
+      if (!response.ok) {
+        setError(data?.error === 'no_face_detected' ? 'Não achamos um rosto nessa foto. Tente outra, com boa iluminação.' : 'Erro ao buscar fotos.')
+        return
+      }
+
+      setResults(data?.results ?? [])
+    } catch {
+      setError('Erro ao buscar fotos.')
     }
-
-    setResults(data.results)
   }
 
   function toggle(photoId: string) {

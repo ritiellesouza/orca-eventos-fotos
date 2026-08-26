@@ -17,20 +17,24 @@ export function PhotoGrid({
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {photos.map((photo) => (
-        <button
-          key={photo.photoId}
-          onClick={() => onToggle(photo.photoId)}
-          className={`relative border-2 rounded ${selected.has(photo.photoId) ? 'border-blue-500' : 'border-transparent'}`}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={photo.previewUrl}
-            alt="Prévia da foto"
-            className={`w-full h-full object-cover rounded transition-all ${isBlurred ? 'blur-lg' : ''}`}
-          />
-        </button>
-      ))}
+      {photos.map((photo, index) => {
+        const isSelected = selected.has(photo.photoId)
+        return (
+          <button
+            key={photo.photoId}
+            onClick={() => onToggle(photo.photoId)}
+            aria-pressed={isSelected}
+            className={`relative border-2 rounded ${isSelected ? 'border-blue-500' : 'border-transparent'}`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={photo.previewUrl}
+              alt={`Foto ${index + 1}${isSelected ? ' (selecionada)' : ''}`}
+              className={`w-full h-full object-cover rounded transition-all ${isBlurred ? 'blur-lg' : ''}`}
+            />
+          </button>
+        )
+      })}
     </div>
   )
 }
