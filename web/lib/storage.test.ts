@@ -34,4 +34,21 @@ describe('getSignedDownloadUrl', () => {
     const url = await getSignedDownloadUrl('originais/evt1/photo1.jpg', 3600)
     expect(url).toContain('originais/evt1/photo1.jpg')
   })
+
+  it('honors the expirySeconds parameter in the signed URL', async () => {
+    s3Mock.on(GetObjectCommand).resolves({})
+
+    const url = await getSignedDownloadUrl('originais/evt1/photo1.jpg', 3600)
+    expect(url).toContain('X-Amz-Expires=3600')
+  })
+
+  it('generates different signed URLs for different expiry times', async () => {
+    s3Mock.on(GetObjectCommand).resolves({})
+
+    const url1h = await getSignedDownloadUrl('originais/evt1/photo1.jpg', 3600)
+    const url24h = await getSignedDownloadUrl('originais/evt1/photo1.jpg', 86400)
+
+    expect(url1h).toContain('X-Amz-Expires=3600')
+    expect(url24h).toContain('X-Amz-Expires=86400')
+  })
 })
