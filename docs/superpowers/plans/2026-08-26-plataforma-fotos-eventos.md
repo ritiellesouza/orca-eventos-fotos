@@ -1648,9 +1648,12 @@ import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabaseClient'
 import { handleCheckoutCompleted } from '@/lib/webhookHandler'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+function stripeClient() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!)
+}
 
 export async function POST(request: NextRequest) {
+  const stripe = stripeClient()
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')!
 
