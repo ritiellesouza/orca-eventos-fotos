@@ -5,6 +5,20 @@ import { generatePreview } from '@/lib/imagePipeline'
 import { uploadObject } from '@/lib/storage'
 import { embedImage } from '@/lib/faceService'
 
+// Strip any client-controlled path segments and characters outside a safe
+// allowlist before the filename is used to build R2 storage keys
+// (`previews/${eventId}/${filename}`, `originais/${eventId}/${filename}`).
+// Without this, a filename like `../../secret.jpg` could escape the
+// intended key prefix.
+function sanitizeFilename(name: string): string {
+  const basename = name.split(/[\\/]/).pop() ?? name
+  const cleaned = basename.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^\.+/, '')
+  return cleaned || 'file'
+}
+
+type UploadSuccess = { filename: string; id: string; hasFace: boolean }
+type UploadFailure = { filename: string; error: string }
+
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const eventId = params.id
   const formData = await request.formData()
@@ -37,12 +51,22 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     },
   }
 
-  const uploaded = []
+  const uploaded: UploadSuccess[] = []
+  const failed: UploadFailure[] = []
+
   for (const file of files) {
-    const buffer = Buffer.from(await file.arrayBuffer())
-    const result = await processPhotoUpload(deps, eventId, file.name, buffer)
-    uploaded.push(result)
+    const safeFilename = sanitizeFilename(file.name)
+    try {
+      const buffer = Buffer.from(await file.arrayBuffer())
+      const result = await processPhotoUpload(deps, eventId, safeFilename, buffer)
+      uploaded.push({ filename: safeFilename, id: result.id, hasFace: result.hasFace })
+    } catch (err) {
+      failed.push({
+        filename: safeFilename,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
   }
 
-  return NextResponse.json({ uploaded })
+  return NextResponse.json({ uploaded, failed })
 }
