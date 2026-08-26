@@ -3,7 +3,9 @@ import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabaseClient'
 import { buildCheckoutSession } from '@/lib/checkout'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+function stripeClient() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!)
+}
 
 export async function POST(request: NextRequest) {
   const { eventId, photoIds, buyerEmail } = await request.json()
@@ -13,6 +15,7 @@ export async function POST(request: NextRequest) {
   }
 
   const db = supabaseAdmin()
+  const stripe = stripeClient()
 
   const result = await buildCheckoutSession(
     {
