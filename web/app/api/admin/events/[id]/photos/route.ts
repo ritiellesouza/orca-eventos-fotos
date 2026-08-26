@@ -4,6 +4,7 @@ import { processPhotoUpload, type PhotoUploadDeps } from '@/lib/photoUpload'
 import { generatePreview } from '@/lib/imagePipeline'
 import { uploadObject } from '@/lib/storage'
 import { embedImage } from '@/lib/faceService'
+import { isUuid } from '@/lib/validation'
 
 // Strip any client-controlled path segments and characters outside a safe
 // allowlist before the filename is used to build R2 storage keys
@@ -21,6 +22,12 @@ type UploadFailure = { filename: string; error: string }
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const eventId = params.id
+
+  // eventId is interpolated straight into R2 storage keys by processPhotoUpload.
+  if (!isUuid(eventId)) {
+    return NextResponse.json({ error: 'invalid_event_id' }, { status: 400 })
+  }
+
   const formData = await request.formData()
   const files = formData.getAll('photos') as File[]
 
