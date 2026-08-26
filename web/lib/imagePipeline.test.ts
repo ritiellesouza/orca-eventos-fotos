@@ -26,4 +26,22 @@ describe('generatePreview', () => {
 
     expect(Buffer.compare(preview, plainResize)).not.toBe(0)
   })
+
+  it('does not enlarge small images and applies full watermark coverage', async () => {
+    const original = await sharp({
+      create: { width: 400, height: 300, channels: 3, background: { r: 255, g: 255, b: 255 } },
+    }).jpeg().toBuffer()
+
+    const preview = await generatePreview(original, 'Orca Mídias')
+    const meta = await sharp(preview).metadata()
+
+    // Verify no upscaling occurred
+    expect(meta.width).toBe(400)
+    expect(meta.height).toBe(300)
+    expect(meta.format).toBe('jpeg')
+
+    // Verify watermark was applied (buffer differs from plain resize)
+    const plainResize = await sharp(original).resize(400, 300, { withoutEnlargement: true }).jpeg().toBuffer()
+    expect(Buffer.compare(preview, plainResize)).not.toBe(0)
+  })
 })

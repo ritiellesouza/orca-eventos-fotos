@@ -37,6 +37,7 @@ export async function generatePreview(original: Buffer, watermarkText: string): 
       width: MAX_DIMENSION,
       height: MAX_DIMENSION,
       fit: 'inside',
+      withoutEnlargement: true,
     })
     .composite([{ input: watermarkSvg, blend: 'over' }])
     .jpeg({ quality: 70 })
