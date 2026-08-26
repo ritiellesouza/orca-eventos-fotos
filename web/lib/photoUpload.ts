@@ -27,8 +27,10 @@ export async function processPhotoUpload(
   const originalKey = `originais/${eventId}/${filename}`
 
   const preview = await deps.generatePreview(original, 'Orca Mídias')
-  await deps.uploadObject(previewKey, preview, 'image/jpeg')
-  await deps.uploadObject(originalKey, original, 'image/jpeg')
+  // The watermarked preview goes to the public bucket; the original must land
+  // in the private one or it would be downloadable without paying.
+  await deps.uploadObject('previews', previewKey, preview, 'image/jpeg')
+  await deps.uploadObject('originals', originalKey, original, 'image/jpeg')
 
   const faces = await deps.embedImage(original)
   const hasFace = faces.length > 0

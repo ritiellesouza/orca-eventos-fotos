@@ -26,7 +26,7 @@ export default async function ObrigadoPage({ searchParams }: { searchParams: { s
   const links = await Promise.all(
     (purchasedPhotos ?? []).map(async (row: { photos: { storage_key_original: string } | { storage_key_original: string }[] }) => {
       const photo = Array.isArray(row.photos) ? row.photos[0] : row.photos
-      return getSignedDownloadUrl(photo.storage_key_original, 3600 * 6)
+      return getSignedDownloadUrl('originals', photo.storage_key_original, 3600 * 6)
     })
   )
 

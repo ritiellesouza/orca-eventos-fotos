@@ -28,8 +28,8 @@ describe('processPhotoUpload', () => {
 
     expect(result).toEqual({ id: 'photo-1', hasFace: true })
     expect(deps.generatePreview).toHaveBeenCalledWith(original, 'Orca Mídias')
-    expect(deps.uploadObject).toHaveBeenCalledWith('previews/event-1/foto.jpg', previewBuffer, 'image/jpeg')
-    expect(deps.uploadObject).toHaveBeenCalledWith('originais/event-1/foto.jpg', original, 'image/jpeg')
+    expect(deps.uploadObject).toHaveBeenCalledWith('previews', 'previews/event-1/foto.jpg', previewBuffer, 'image/jpeg')
+    expect(deps.uploadObject).toHaveBeenCalledWith('originals', 'originais/event-1/foto.jpg', original, 'image/jpeg')
     expect(deps.insertPhoto).toHaveBeenCalledWith({
       eventId: 'event-1',
       storageKeyPreview: 'previews/event-1/foto.jpg',

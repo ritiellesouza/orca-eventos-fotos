@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseClient'
 import { searchBySelfie, SIMILARITY_THRESHOLD, MAX_RESULTS } from '@/lib/search'
 import { embedImage } from '@/lib/faceService'
+import { requireEnv } from '@/lib/env'
 
 export async function POST(request: NextRequest, { params }: { params: { slug: string } }) {
   const db = supabaseAdmin()
@@ -69,9 +70,11 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       return NextResponse.json({ error: 'photo_lookup_failed' }, { status: 500 })
     }
 
+    const publicBase = requireEnv('NEXT_PUBLIC_R2_PUBLIC_URL')
+
     const results = matches.map((m) => ({
       photoId: m.photoId,
-      previewUrl: `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${photos?.find((p) => p.id === m.photoId)?.storage_key_preview}`,
+      previewUrl: `${publicBase}/${photos?.find((p) => p.id === m.photoId)?.storage_key_preview}`,
     }))
 
     return NextResponse.json({ results })
