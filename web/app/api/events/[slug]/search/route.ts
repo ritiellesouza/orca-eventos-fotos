@@ -22,10 +22,14 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
     return NextResponse.json({ error: 'selfie_required' }, { status: 400 })
   }
 
-  await db.from('consents').insert({
+  const { error: consentError } = await db.from('consents').insert({
     event_id: event.id,
     ip_address: request.headers.get('x-forwarded-for'),
   })
+
+  if (consentError) {
+    return NextResponse.json({ error: 'consent_logging_failed' }, { status: 500 })
+  }
 
   const selfieBuffer = Buffer.from(await selfieFile.arrayBuffer())
 
@@ -51,8 +55,19 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       selfieBuffer
     )
 
+    if (matches.length === 0) {
+      return NextResponse.json({ results: [] })
+    }
+
     const photoIds = matches.map((m) => m.photoId)
-    const { data: photos } = await db.from('photos').select('id, storage_key_preview').in('id', photoIds)
+    const { data: photos, error: photosError } = await db
+      .from('photos')
+      .select('id, storage_key_preview')
+      .in('id', photoIds)
+
+    if (photosError) {
+      return NextResponse.json({ error: 'photo_lookup_failed' }, { status: 500 })
+    }
 
     const results = matches.map((m) => ({
       photoId: m.photoId,
