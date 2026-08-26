@@ -15,6 +15,9 @@ export function SelfieUploader({ slug }: { slug: string }) {
     setError(null)
     const formData = new FormData()
     formData.append('selfie', file)
+    // The API rejects the request without this; the consent gate below is a UI
+    // affordance, this field is what the server records the agreement from.
+    formData.append('consent', 'true')
 
     try {
       const response = await fetch(`/api/events/${slug}/search`, { method: 'POST', body: formData })
