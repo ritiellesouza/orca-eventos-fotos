@@ -2,14 +2,19 @@
 
 import { useState } from 'react'
 import { PhotoGrid } from './PhotoGrid'
+import { formatTotalBRL } from '@/lib/pricing'
 
 type PhotoResult = { photoId: string; previewUrl: string }
 
-export function SelfieUploader({ slug }: { slug: string }) {
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export function SelfieUploader({ slug, eventId }: { slug: string; eventId: string }) {
   const [consented, setConsented] = useState(false)
   const [results, setResults] = useState<PhotoResult[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [email, setEmail] = useState('')
+  const [checkoutInFlight, setCheckoutInFlight] = useState(false)
 
   async function handleFile(file: File) {
     setError(null)
@@ -52,6 +57,41 @@ export function SelfieUploader({ slug }: { slug: string }) {
     })
   }
 
+  async function handleCheckout() {
+    setError(null)
+    setCheckoutInFlight(true)
+
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, photoIds: Array.from(selected), buyerEmail: email }),
+      })
+
+      let data: { error?: string; url?: string } | null = null
+      try {
+        data = await response.json()
+      } catch {
+        data = null
+      }
+
+      if (!response.ok || !data?.url) {
+        setError(
+          data?.error === 'unknown_photo_ids'
+            ? 'Algumas fotos selecionadas não estão mais disponíveis. Atualize a página e tente de novo.'
+            : 'Erro ao iniciar pagamento. Tente novamente.'
+        )
+        setCheckoutInFlight(false)
+        return
+      }
+
+      window.location.href = data.url
+    } catch {
+      setError('Erro ao iniciar pagamento. Tente novamente.')
+      setCheckoutInFlight(false)
+    }
+  }
+
   if (!consented) {
     return (
       <div>
@@ -60,6 +100,9 @@ export function SelfieUploader({ slug }: { slug: string }) {
       </div>
     )
   }
+
+  const unitPriceCents = Number(process.env.NEXT_PUBLIC_PHOTO_PRICE_CENTS)
+  const emailIsValid = EMAIL_PATTERN.test(email)
 
   return (
     <div>
@@ -71,6 +114,24 @@ export function SelfieUploader({ slug }: { slug: string }) {
       />
       {error && <p role="alert">{error}</p>}
       {results && <PhotoGrid photos={results} selected={selected} onToggle={toggle} />}
+      {selected.size > 0 && (
+        <div>
+          <p>
+            {selected.size} {selected.size === 1 ? 'foto selecionada' : 'fotos selecionadas'} · {formatTotalBRL(unitPriceCents, selected.size)}
+          </p>
+          <label htmlFor="buyer-email">Seu e-mail</label>
+          <input
+            id="buyer-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="voce@exemplo.com"
+          />
+          <button onClick={handleCheckout} disabled={!emailIsValid || checkoutInFlight}>
+            Comprar
+          </button>
+        </div>
+      )}
     </div>
   )
 }
