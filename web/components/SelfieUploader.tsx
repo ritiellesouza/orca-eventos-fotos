@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PhotoGrid } from './PhotoGrid'
 import { formatTotalBRL } from '@/lib/pricing'
 
@@ -12,9 +12,26 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
   const [consented, setConsented] = useState(false)
   const [results, setResults] = useState<PhotoResult[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [email, setEmail] = useState('')
   const [checkoutInFlight, setCheckoutInFlight] = useState(false)
+
+  // If the buyer navigates to Stripe Checkout and then hits Back, some browsers
+  // (bfcache) restore this exact page/component state instead of remounting --
+  // including checkoutInFlight left `true` from the redirect. Without this, the
+  // Comprar button would stay disabled forever with no visible explanation. On
+  // a normal successful checkout the page navigates away entirely, so this
+  // listener never fires for that path and there's nothing to reset there.
+  useEffect(() => {
+    function onPageShow(e: PageTransitionEvent) {
+      if (e.persisted) {
+        setCheckoutInFlight(false)
+      }
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [])
 
   async function handleFile(file: File) {
     setError(null)
@@ -39,6 +56,12 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
         return
       }
 
+      // A new search replaces the visible grid entirely. Any photo ids selected
+      // from a previous grid would otherwise survive with no visible tile, but
+      // still ride along into the checkout total and the /api/checkout request
+      // (they're still valid photos of this event, so the server can't catch it) --
+      // the buyer would be billed for photos they can no longer see or deselect.
+      setSelected(new Set())
       setResults(data?.results ?? [])
     } catch {
       setError('Erro ao buscar fotos.')
@@ -58,7 +81,7 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
   }
 
   async function handleCheckout() {
-    setError(null)
+    setCheckoutError(null)
     setCheckoutInFlight(true)
 
     try {
@@ -76,7 +99,7 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
       }
 
       if (!response.ok || !data?.url) {
-        setError(
+        setCheckoutError(
           data?.error === 'unknown_photo_ids'
             ? 'Algumas fotos selecionadas não estão mais disponíveis. Atualize a página e tente de novo.'
             : 'Erro ao iniciar pagamento. Tente novamente.'
@@ -87,7 +110,7 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
 
       window.location.href = data.url
     } catch {
-      setError('Erro ao iniciar pagamento. Tente novamente.')
+      setCheckoutError('Erro ao iniciar pagamento. Tente novamente.')
       setCheckoutInFlight(false)
     }
   }
@@ -101,7 +124,12 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
     )
   }
 
-  const unitPriceCents = Number(process.env.NEXT_PUBLIC_PHOTO_PRICE_CENTS)
+  const rawPrice = Number(process.env.NEXT_PUBLIC_PHOTO_PRICE_CENTS)
+  // NEXT_PUBLIC_PHOTO_PRICE_CENTS is display-only -- the server computes and
+  // charges the real price independently. If it's unset/misconfigured, show
+  // just the count rather than fabricating a total from a hardcoded default,
+  // which would silently show a price that can be wrong instead of missing.
+  const unitPriceCents = Number.isFinite(rawPrice) && rawPrice > 0 ? rawPrice : null
   const emailIsValid = EMAIL_PATTERN.test(email)
 
   return (
@@ -117,7 +145,8 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
       {selected.size > 0 && (
         <div>
           <p>
-            {selected.size} {selected.size === 1 ? 'foto selecionada' : 'fotos selecionadas'} · {formatTotalBRL(unitPriceCents, selected.size)}
+            {selected.size} {selected.size === 1 ? 'foto selecionada' : 'fotos selecionadas'}
+            {unitPriceCents !== null && <> · {formatTotalBRL(unitPriceCents, selected.size)}</>}
           </p>
           <label htmlFor="buyer-email">Seu e-mail</label>
           <input
@@ -130,6 +159,7 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
           <button onClick={handleCheckout} disabled={!emailIsValid || checkoutInFlight}>
             Comprar
           </button>
+          {checkoutError && <p role="alert">{checkoutError}</p>}
         </div>
       )}
     </div>

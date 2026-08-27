@@ -144,7 +144,7 @@ describe('SelfieUploader checkout bar', () => {
     await waitFor(() => expect(window.location.href).toBe('https://checkout.stripe.com/session-123'))
   })
 
-  it('shows a specific message when a photo is no longer available', async () => {
+  it('shows a specific message when a photo is no longer available, next to the checkout bar', async () => {
     process.env.NEXT_PUBLIC_PHOTO_PRICE_CENTS = '1500'
     await selectOnePhoto()
     fireEvent.change(screen.getByLabelText(/e-mail/i), { target: { value: 'comprador@example.com' } })
@@ -156,9 +156,16 @@ describe('SelfieUploader checkout bar', () => {
     fireEvent.click(screen.getByRole('button', { name: /comprar/i }))
 
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/não estão mais disponíveis/i))
+
+    // The checkout error must render inside the checkout bar (same parent as
+    // the Comprar button), not in the top-level search-error slot near the
+    // file input -- otherwise it can be scrolled off-screen from the button.
+    const alert = screen.getByRole('alert')
+    const buyButton = screen.getByRole('button', { name: /comprar/i })
+    expect(alert.parentElement).toBe(buyButton.parentElement)
   })
 
-  it('shows a generic message on a network failure', async () => {
+  it('shows a generic message on a network failure, next to the checkout bar', async () => {
     process.env.NEXT_PUBLIC_PHOTO_PRICE_CENTS = '1500'
     await selectOnePhoto()
     fireEvent.change(screen.getByLabelText(/e-mail/i), { target: { value: 'comprador@example.com' } })
@@ -168,5 +175,67 @@ describe('SelfieUploader checkout bar', () => {
     fireEvent.click(screen.getByRole('button', { name: /comprar/i }))
 
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/erro ao iniciar pagamento/i))
+
+    const alert = screen.getByRole('alert')
+    const buyButton = screen.getByRole('button', { name: /comprar/i })
+    expect(alert.parentElement).toBe(buyButton.parentElement)
+  })
+
+  it('does not carry a checkout error into a fresh search (independent error state)', async () => {
+    process.env.NEXT_PUBLIC_PHOTO_PRICE_CENTS = '1500'
+    await selectOnePhoto()
+    fireEvent.change(screen.getByLabelText(/e-mail/i), { target: { value: 'comprador@example.com' } })
+
+    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('network down'))
+    fireEvent.click(screen.getByRole('button', { name: /comprar/i }))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/erro ao iniciar pagamento/i))
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ results: [{ photoId: 'photo-2', previewUrl: 'https://example.com/p2.jpg' }] }),
+        { status: 200 }
+      )
+    )
+    const file2 = new File(['bytes'], 'selfie2.jpg', { type: 'image/jpeg' })
+    fireEvent.change(fileInput()!, { target: { files: [file2] } })
+
+    await waitFor(() =>
+      expect(screen.getByAltText(/foto 1/i).getAttribute('src')).toBe('https://example.com/p2.jpg')
+    )
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('clears a stale selection when a new search is performed', async () => {
+    process.env.NEXT_PUBLIC_PHOTO_PRICE_CENTS = '1500'
+    await selectOnePhoto()
+    expect(screen.getByRole('button', { name: /comprar/i })).toBeTruthy()
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ results: [{ photoId: 'photo-2', previewUrl: 'https://example.com/p2.jpg' }] }),
+        { status: 200 }
+      )
+    )
+
+    const file2 = new File(['bytes'], 'selfie2.jpg', { type: 'image/jpeg' })
+    fireEvent.change(fileInput()!, { target: { files: [file2] } })
+
+    // Wait for the new grid (a different photo, same "Foto 1" ordinal) to render.
+    await waitFor(() =>
+      expect(screen.getByAltText(/foto 1/i).getAttribute('src')).toBe('https://example.com/p2.jpg')
+    )
+
+    // The old selection (photo-1, no longer visible) must not survive into the
+    // new search -- otherwise the checkout bar would show a stale count/total
+    // for a photo the buyer can no longer see or deselect.
+    expect(screen.queryByRole('button', { name: /comprar/i })).toBeNull()
+  })
+
+  it('shows the photo count without a total when the price env var is unset', async () => {
+    delete process.env.NEXT_PUBLIC_PHOTO_PRICE_CENTS
+    await selectOnePhoto()
+
+    expect(screen.getByText(/1 foto selecionada/i)).toBeTruthy()
+    expect(screen.queryByText(/R\$/)).toBeNull()
   })
 })
