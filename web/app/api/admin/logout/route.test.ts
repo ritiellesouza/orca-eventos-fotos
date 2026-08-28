@@ -13,7 +13,7 @@ describe('POST /api/admin/logout', () => {
     expect(cookie?.value).toBe('')
     // Expired in the past, so the browser drops it rather than keeping an
     // empty-but-present cookie around.
-    expect(cookie?.expires?.getTime()).toBe(0)
+    expect(new Date(cookie!.expires!).getTime()).toBe(0)
   })
 
   it('sends the clearing cookie for the whole site, not just /api', async () => {
