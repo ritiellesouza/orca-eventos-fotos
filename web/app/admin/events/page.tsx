@@ -5,6 +5,19 @@ import Link from 'next/link'
 
 type EventRow = { id: string; name: string; slug: string; eventDate: string; photoCount: number }
 
+// The admin API answers a failed create/edit with `{ error: "<reason>" }` — a
+// duplicate slug (the column is `unique`) is by far the likeliest real failure
+// here, and it is only distinguishable from an outage if we show the body.
+async function serverError(response: Response, fallback: string): Promise<string> {
+  try {
+    const data = await response.json()
+    const message = (data as { error?: unknown } | null)?.error
+    return typeof message === 'string' && message.length > 0 ? message : fallback
+  } catch {
+    return fallback
+  }
+}
+
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<EventRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -55,7 +68,7 @@ export default function AdminEventsPage() {
       })
 
       if (!response.ok) {
-        setError('Erro ao criar evento.')
+        setError(await serverError(response, 'Erro ao criar evento.'))
         return
       }
 
@@ -82,7 +95,7 @@ export default function AdminEventsPage() {
       })
 
       if (!response.ok) {
-        setError('Erro ao editar evento.')
+        setError(await serverError(response, 'Erro ao editar evento.'))
         return
       }
 

@@ -113,6 +113,64 @@ describe('AdminEventsPage', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it('surfaces the server error message when create fails (e.g. duplicate slug)', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ events: [] }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ error: 'duplicate key value violates unique constraint "events_slug_key"' }),
+          { status: 400 }
+        )
+      )
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole('button', { name: /criar evento/i }))
+    fireEvent.change(screen.getByLabelText(/^nome$/i), { target: { value: 'Novo Evento' } })
+    fireEvent.change(screen.getByLabelText(/slug/i), { target: { value: 'festa-junina' } })
+    fireEvent.change(screen.getByLabelText(/data/i), { target: { value: '2026-12-01' } })
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/events_slug_key/))
+    expect(screen.queryByText('Erro ao criar evento.')).toBeNull()
+  })
+
+  it('falls back to the generic message when the failed create body has no error field', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ events: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response('<html>502</html>', { status: 502 }))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole('button', { name: /criar evento/i }))
+    fireEvent.change(screen.getByLabelText(/^nome$/i), { target: { value: 'Novo Evento' } })
+    fireEvent.change(screen.getByLabelText(/slug/i), { target: { value: 'novo-evento' } })
+    fireEvent.change(screen.getByLabelText(/data/i), { target: { value: '2026-12-01' } })
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Erro ao criar evento.'))
+  })
+
+  it('surfaces the server error message when editing fails', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'event_not_found' }), { status: 404 }))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('event_not_found'))
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('shows an error message when delete fails due to a network error, without crashing', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     const fetchMock = vi
