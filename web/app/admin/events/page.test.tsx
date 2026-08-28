@@ -1,0 +1,189 @@
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}))
+
+import AdminEventsPage from './page'
+
+const EVENTS_RESPONSE = {
+  events: [
+    { id: '1', name: 'Festa Junina', slug: 'festa-junina', eventDate: '2026-06-20', photoCount: 42 },
+  ],
+}
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+describe('AdminEventsPage', () => {
+  it('loads and renders the event list with photo counts', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+
+    render(<AdminEventsPage />)
+
+    await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
+    expect(screen.getByText('42')).toBeTruthy()
+  })
+
+  it('creates a new event and reloads the list', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ events: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: '2', name: 'X', slug: 'x', eventDate: '2026-01-01' }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole('button', { name: /criar evento/i }))
+    fireEvent.change(screen.getByLabelText(/^nome$/i), { target: { value: 'Novo Evento' } })
+    fireEvent.change(screen.getByLabelText(/slug/i), { target: { value: 'novo-evento' } })
+    fireEvent.change(screen.getByLabelText(/data/i), { target: { value: '2026-12-01' } })
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    const createCall = fetchMock.mock.calls[1]
+    expect(createCall[0]).toBe('/api/admin/events')
+    expect(JSON.parse(createCall[1]!.body as string)).toEqual({
+      name: 'Novo Evento',
+      slug: 'novo-evento',
+      eventDate: '2026-12-01',
+    })
+  })
+
+  it('deletes an event after confirmation and reloads the list', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ events: [] }), { status: 200 }))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: /apagar/i }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/admin/events/1')
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'DELETE' })
+  })
+
+  it('does not delete when the confirmation is cancelled', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: /apagar/i }))
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows an error message when loading the list fails due to a network error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new TypeError('Failed to fetch'))
+
+    render(<AdminEventsPage />)
+
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
+    expect(screen.getByRole('alert').textContent).toMatch(/erro/i)
+  })
+
+  it('shows an error message when create fails due to a network error, without crashing', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ events: [] }), { status: 200 }))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole('button', { name: /criar evento/i }))
+    fireEvent.change(screen.getByLabelText(/^nome$/i), { target: { value: 'Novo Evento' } })
+    fireEvent.change(screen.getByLabelText(/slug/i), { target: { value: 'novo-evento' } })
+    fireEvent.change(screen.getByLabelText(/data/i), { target: { value: '2026-12-01' } })
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }))
+
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows an error message when delete fails due to a network error, without crashing', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: /apagar/i }))
+
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not fire a second create request while the first is still in flight', async () => {
+    let resolveCreate: (value: Response) => void = () => {}
+    const createPromise = new Promise<Response>((resolve) => {
+      resolveCreate = resolve
+    })
+
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ events: [] }), { status: 200 }))
+      .mockImplementationOnce(() => createPromise)
+      .mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole('button', { name: /criar evento/i }))
+    fireEvent.change(screen.getByLabelText(/^nome$/i), { target: { value: 'Novo Evento' } })
+    fireEvent.change(screen.getByLabelText(/slug/i), { target: { value: 'novo-evento' } })
+    fireEvent.change(screen.getByLabelText(/data/i), { target: { value: '2026-12-01' } })
+
+    const saveButton = screen.getByRole('button', { name: /^salvar$/i })
+    fireEvent.click(saveButton)
+    fireEvent.click(saveButton)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+
+    resolveCreate(new Response(JSON.stringify({ id: '2', name: 'X', slug: 'x', eventDate: '2026-01-01' }), { status: 201 }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+  })
+
+  it('does not fire a second delete request while the first is still in flight', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    let resolveDelete: (value: Response) => void = () => {}
+    const deletePromise = new Promise<Response>((resolve) => {
+      resolveDelete = resolve
+    })
+
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+      .mockImplementationOnce(() => deletePromise)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ events: [] }), { status: 200 }))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
+
+    const deleteButton = screen.getByRole('button', { name: /apagar/i })
+    fireEvent.click(deleteButton)
+    fireEvent.click(deleteButton)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+
+    resolveDelete(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+  })
+})
