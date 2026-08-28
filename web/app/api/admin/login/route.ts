@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { tokensMatch, ADMIN_COOKIE_NAME } from '@/middleware'
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'invalid_password' }, { status: 401 })
+  }
+
   const password = body?.password
   const expected = process.env.ADMIN_TOKEN
 

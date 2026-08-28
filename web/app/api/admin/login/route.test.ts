@@ -55,4 +55,15 @@ describe('POST /api/admin/login', () => {
     const response = await POST(loginRequest(12345))
     expect(response.status).toBe(401)
   })
+
+  it('rejects an invalid JSON body with the same generic error', async () => {
+    const response = await POST(
+      new NextRequest('http://localhost:3000/api/admin/login', {
+        method: 'POST',
+        body: 'not valid json',
+      })
+    )
+    expect(response.status).toBe(401)
+    await expect(response.json()).resolves.toEqual({ error: 'invalid_password' })
+  })
 })
