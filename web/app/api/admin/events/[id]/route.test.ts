@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { NextRequest } from 'next/server'
 
 const mockUpdateMaybeSingle = vi.fn()
 const mockDeleteMaybeSingle = vi.fn()
@@ -34,14 +35,14 @@ function jsonRequest(body: unknown) {
   return new Request(`http://localhost:3000/api/admin/events/${VALID_ID}`, {
     method: 'PATCH',
     body: JSON.stringify(body),
-  }) as any
+  }) as unknown as NextRequest
 }
 
 function malformedJsonRequest() {
   return new Request(`http://localhost:3000/api/admin/events/${VALID_ID}`, {
     method: 'PATCH',
     body: '{not valid json',
-  }) as any
+  }) as unknown as NextRequest
 }
 
 describe('PATCH /api/admin/events/[id]', () => {
@@ -110,14 +111,14 @@ describe('DELETE /api/admin/events/[id]', () => {
   it('deletes the event and returns ok', async () => {
     mockDeleteMaybeSingle.mockResolvedValue({ data: { id: VALID_ID }, error: null })
 
-    const response = await DELETE(new Request('http://localhost:3000') as any, { params: { id: VALID_ID } })
+    const response = await DELETE(new Request('http://localhost:3000') as unknown as NextRequest, { params: { id: VALID_ID } })
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ ok: true })
   })
 
   it('rejects an invalid id', async () => {
-    const response = await DELETE(new Request('http://localhost:3000') as any, { params: { id: 'nope' } })
+    const response = await DELETE(new Request('http://localhost:3000') as unknown as NextRequest, { params: { id: 'nope' } })
     expect(response.status).toBe(400)
     expect(mockDeleteMaybeSingle).not.toHaveBeenCalled()
   })
@@ -125,7 +126,7 @@ describe('DELETE /api/admin/events/[id]', () => {
   it('returns 404 when no row matches the id', async () => {
     mockDeleteMaybeSingle.mockResolvedValue({ data: null, error: null })
 
-    const response = await DELETE(new Request('http://localhost:3000') as any, { params: { id: VALID_ID } })
+    const response = await DELETE(new Request('http://localhost:3000') as unknown as NextRequest, { params: { id: VALID_ID } })
     expect(response.status).toBe(404)
   })
 })

@@ -10,19 +10,20 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   // A malformed/empty body must fail cleanly (400) rather than crash to a
   // generic 500 — same defensive pattern as the login route's request.json()
   // guard. Treated the same as "nothing to update".
-  let body: any
+  let body: unknown
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'nothing_to_update' }, { status: 400 })
   }
 
+  const parsed = body as { name?: unknown; eventDate?: unknown } | null | undefined
   const update: { name?: string; event_date?: string } = {}
-  if (typeof body?.name === 'string' && body.name.length > 0) {
-    update.name = body.name
+  if (typeof parsed?.name === 'string' && parsed.name.length > 0) {
+    update.name = parsed.name
   }
-  if (typeof body?.eventDate === 'string' && body.eventDate.length > 0) {
-    update.event_date = body.eventDate
+  if (typeof parsed?.eventDate === 'string' && parsed.eventDate.length > 0) {
+    update.event_date = parsed.eventDate
   }
 
   if (Object.keys(update).length === 0) {
