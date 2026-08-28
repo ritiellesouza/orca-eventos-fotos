@@ -5,8 +5,13 @@ import { NextRequest, NextResponse } from 'next/server'
 // create events, upload arbitrary files and drive InsightFace inference on the
 // shared VM. A single shared secret is enough for a staff-only surface at this
 // scale; it is deliberately fail-closed when ADMIN_TOKEN is not configured.
+//
+// /admin/* page routes are gated the same way, via a cookie carrying the same
+// token value (no separate session store) — see the admin panel design doc.
+export const ADMIN_COOKIE_NAME = 'admin_token'
+
 export const config = {
-  matcher: '/api/admin/:path*',
+  matcher: ['/api/admin/:path*', '/admin/:path*'],
 }
 
 // Length-independent comparison so a wrong token cannot be discovered byte by
@@ -31,19 +36,35 @@ export function bearerToken(authorizationHeader: string | null): string | null {
 }
 
 export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // The login page and its API route must be reachable with no valid token —
+  // otherwise nobody could ever obtain one.
+  if (pathname === '/admin/login' || pathname === '/api/admin/login') {
+    return NextResponse.next()
+  }
+
   const expected = process.env.ADMIN_TOKEN
 
   if (!expected) {
-    return NextResponse.json({ error: 'admin_auth_not_configured' }, { status: 500 })
+    return pathname.startsWith('/api/')
+      ? NextResponse.json({ error: 'admin_auth_not_configured' }, { status: 500 })
+      : NextResponse.redirect(new URL('/admin/login', request.url))
   }
 
-  const presented = bearerToken(request.headers.get('authorization'))
+  const presented =
+    bearerToken(request.headers.get('authorization')) ??
+    request.cookies.get(ADMIN_COOKIE_NAME)?.value ??
+    null
 
   if (!presented || !tokensMatch(presented, expected)) {
-    return NextResponse.json(
-      { error: 'unauthorized' },
-      { status: 401, headers: { 'WWW-Authenticate': 'Bearer' } }
-    )
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: 'unauthorized' },
+        { status: 401, headers: { 'WWW-Authenticate': 'Bearer' } }
+      )
+    }
+    return NextResponse.redirect(new URL('/admin/login', request.url))
   }
 
   return NextResponse.next()
