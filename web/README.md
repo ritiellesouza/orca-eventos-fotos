@@ -8,7 +8,7 @@ Three moving parts:
 
 | Part | Path | What it is |
 | --- | --- | --- |
-| Web app | `web/` | Next.js 14 (App Router). Public event pages, admin upload API, Stripe checkout + webhook. |
+| Web app | `web/` | Next.js 14 (App Router). Public event pages, admin panel + API, Stripe checkout + webhook. |
 | Face service | `face-service/` | Python FastAPI + InsightFace. Turns an image into 512-dimension face embeddings. Private network only. |
 | Database | `supabase/migrations/` | Postgres + pgvector, in its own `orca_eventos` schema. |
 
@@ -84,7 +84,7 @@ exposed to PostgREST or every call 404s.
 
 | Variable | Notes |
 | --- | --- |
-| `ADMIN_TOKEN` | Shared secret guarding every `/api/admin/*` route. Sent as `Authorization: Bearer <token>`. |
+| `ADMIN_TOKEN` | Shared secret guarding every `/api/admin/*` route **and** every `/admin/*` page. Sent as `Authorization: Bearer <token>` by scripts; typed as the password in the admin panel's login form, which stores the same value in an httpOnly cookie. |
 
 Generate the two secrets with:
 
@@ -92,10 +92,27 @@ Generate the two secrets with:
 openssl rand -hex 32
 ```
 
-`web/middleware.ts` is **fail-closed**: with `ADMIN_TOKEN` unset, every admin
-route returns `500 admin_auth_not_configured`. The face service behaves the same
-way for `FACE_SERVICE_TOKEN`. That is deliberate — a misconfigured deploy must
-never serve those routes anonymously.
+`web/middleware.ts` is **fail-closed**, and it gates two surfaces differently:
+
+| Path | `ADMIN_TOKEN` unset | Token set, credential missing/wrong |
+| --- | --- | --- |
+| `/api/admin/*` | `500 admin_auth_not_configured` | `401 unauthorized` (JSON) |
+| `/admin/*` pages | redirect to `/admin/login` | redirect to `/admin/login` |
+
+`/admin/login` and `POST /api/admin/login` are exempt from the gate entirely —
+they have to be, since they are how a credential is obtained. The login route
+is instead rate-limited to 5 attempts per IP per minute. `POST /api/admin/logout`
+clears the cookie; it is *not* exempt, so only a session that already holds a
+valid credential can end itself.
+
+The pages fail closed too: they never 500 at an unauthenticated visitor, they
+send them to the login form. The face service behaves the same fail-closed way
+for `FACE_SERVICE_TOKEN`. That is deliberate — a misconfigured deploy must never
+serve those routes anonymously.
+
+Because `ADMIN_TOKEN` is now typed by a human at a login form, do not weaken it
+to something memorable: it is still the single secret behind the service-role
+key and the R2 write credential.
 
 ### Retention (optional)
 
@@ -198,6 +215,36 @@ curl -s -o /dev/null -w '%{http_code}\n' \
   -H "Accept-Profile: orca_eventos" \
   "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/events?select=id&limit=1"
 ```
+
+### PostgREST aggregates must be enabled
+
+`GET /api/admin/events` — the admin panel's event list — asks PostgREST for the
+photo count per event with an embedded aggregate:
+
+```
+select=id,name,slug,event_date,photos(count)
+```
+
+PostgREST **disables aggregate functions by default since v12**
+(`PGRST_DB_AGGREGATES_ENABLED=false`). With them off, that request errors and
+the event list fails to load — while every other route in the app keeps working,
+which makes it an easy thing to misdiagnose.
+
+This was verified working against the current self-hosted instance on the G3
+Mídia VM (the request returns `200`), so no change is needed there today.
+**Re-check it after any Supabase/PostgREST version upgrade or on a fresh VM
+build**, since the default is off and the setting is easy to lose:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' \
+  -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "Accept-Profile: orca_eventos" \
+  "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/events?select=id,photos(count)&limit=1"
+```
+
+If it fails, set `PGRST_DB_AGGREGATES_ENABLED=true` in the `rest` service
+environment and restart it.
 
 ---
 
@@ -309,15 +356,45 @@ npm run lint
 | `POST /api/events/[slug]/search` | public, rate-limited | Selfie → face match. Requires `consent=true` in the form body. |
 | `POST /api/checkout` | public | Creates a Stripe Checkout session. Price is server-side. |
 | `POST /api/webhooks/stripe` | Stripe signature | Marks the purchase paid and unlocks downloads. |
+| `/admin/login` | public (gate-exempt) | Password form. The password *is* `ADMIN_TOKEN`. |
+| `/admin/events` | `ADMIN_TOKEN` cookie | Event list with photo counts; create, edit, delete, log out. |
+| `/admin/events/[id]/upload` | `ADMIN_TOKEN` cookie | Drag-and-drop photo upload with a per-file result. |
+| `POST /api/admin/login` | public (gate-exempt), rate-limited | Password → httpOnly cookie. 5 attempts per IP per minute. |
+| `POST /api/admin/logout` | `ADMIN_TOKEN` | Clears the cookie. |
+| `GET /api/admin/events` | `ADMIN_TOKEN` | List events with photo counts. Needs PostgREST aggregates — see §4. |
 | `POST /api/admin/events` | `ADMIN_TOKEN` | Create an event. |
+| `PATCH /api/admin/events/[id]` | `ADMIN_TOKEN` | Edit an event's name/date. `404` if the id does not exist. |
+| `DELETE /api/admin/events/[id]` | `ADMIN_TOKEN` | Delete an event. Cascades to photos/faces/purchases in the DB; **R2 objects are left orphaned**. |
 | `POST /api/admin/events/[id]/photos` | `ADMIN_TOKEN` | Bulk photo upload (preview generation + face indexing). |
 
 The search route is rate-limited to 10 requests per IP per minute and caps
 selfies at 10MB, because it triggers face inference on the shared VM.
 
-### Admin routes need `ADMIN_TOKEN`
+### The admin panel
 
-There is no admin UI yet — the admin API is driven with `curl`:
+Staff work in the browser under `/admin`. There are no individual accounts: the
+login is a single shared password, and that password is the `ADMIN_TOKEN` value
+itself. A successful login stores it in an httpOnly cookie (30 days,
+`sameSite=lax`, `secure`), which `web/middleware.ts` accepts in place of the
+`Authorization: Bearer` header.
+
+1. `/admin/login` — enter the password.
+2. `/admin/events` — list, create, edit and delete events; "Sair" logs out.
+3. `/admin/events/[id]/upload` — drag photos in; each file gets its own
+   success/failure line.
+
+Because the cookie carries the shared token, "logging out" only clears *that
+browser's* cookie. Revoking access for everyone still means rotating
+`ADMIN_TOKEN` and redeploying.
+
+The cookie is set with `secure: true`. Chrome and Firefox treat `http://localhost`
+as a trusted origin and accept it; Safari does not, so logging in over plain
+`http://localhost` fails there specifically.
+
+### Driving the admin API with `curl`
+
+The same routes still work headlessly with a Bearer token — useful for scripting
+a bulk import rather than dragging thousands of files into a browser tab:
 
 ```bash
 # Create an event
@@ -335,7 +412,8 @@ curl -X POST http://localhost:3000/api/admin/events/<event-uuid>/photos \
 
 Upload is synchronous and does real work per file (preview + watermark via
 sharp, then face embedding). Upload in batches rather than firing hundreds of
-files at once.
+files at once — this applies to the drag-and-drop panel too, which does not yet
+cap or chunk a batch for you.
 
 ### Stripe webhook
 
@@ -388,13 +466,16 @@ crontab. It uses the same service-role client, so §4 applies to it too.
 - [ ] Migration applied; `orca_eventos.match_faces` exists.
 - [ ] `orca_eventos` in `PGRST_DB_SCHEMAS`; grants applied; the `curl` in §4
       returns 200.
+- [ ] PostgREST aggregates enabled — the `photos(count)` `curl` in §4 returns
+      200, or the admin event list will not load.
 - [ ] Two R2 buckets; public domain on **previews only**; originals bucket has
       no public access.
 - [ ] `NEXT_PUBLIC_R2_PUBLIC_URL` set, no trailing slash.
 - [ ] face-service running, bound to a private interface, model warmed,
       `FACE_SERVICE_TOKEN` set.
 - [ ] `FACE_SERVICE_TOKEN` identical in both processes.
-- [ ] `ADMIN_TOKEN` set (admin routes 500 without it).
+- [ ] `ADMIN_TOKEN` set (admin API routes 500 without it; `/admin/*` pages
+      redirect to the login form). It is also the admin panel's password.
 - [ ] Stripe webhook endpoint registered; `STRIPE_WEBHOOK_SECRET` set.
 - [ ] `PHOTO_PRICE_CENTS` set to the real price.
 - [ ] Purge cron installed with its own environment.
@@ -410,4 +491,9 @@ Tracked for a follow-up plan, not present in this build:
   never read).
 - No download-recovery path for a buyer who closes the tab
   (`purchases.buyer_email` is stored but there is no lookup route).
-- No admin UI pages — the admin API is `curl`-only.
+- Deleting an event leaves its R2 objects orphaned — only the database rows go.
+- The admin panel has no per-person accounts: one shared password, so a logout
+  revokes one browser, not one person.
+- No `/admin` index page — bare `/admin` 404s; go to `/admin/events`.
+- The upload panel does not cap or chunk large batches; a timeout mid-batch
+  leaves no record of which files made it.
