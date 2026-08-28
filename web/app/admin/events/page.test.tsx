@@ -186,4 +186,39 @@ describe('AdminEventsPage', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
   })
+
+  it('does not leak an in-progress create draft into the row being edited', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: /criar evento/i }))
+    fireEvent.change(screen.getByLabelText(/^nome$/i), { target: { value: 'Rascunho não salvo' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+
+    // The create panel must not silently keep showing (and the user must not lose
+    // track of) an unsaved draft once a different form has taken over the shared state.
+    expect(screen.queryByLabelText(/^nome$/i)).toBeNull()
+    // The row being edited must show its own original data, not the create draft.
+    expect(screen.getByDisplayValue('Festa Junina')).toBeTruthy()
+    expect(screen.queryByDisplayValue('Rascunho não salvo')).toBeNull()
+  })
+
+  it('does not leak an in-progress edit into a freshly opened create panel', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
+    fireEvent.change(screen.getByDisplayValue('Festa Junina'), { target: { value: 'Editado sem salvar' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /criar evento/i }))
+
+    // The create panel must open empty, not pre-filled with the unsaved edit.
+    expect((screen.getByLabelText(/^nome$/i) as HTMLInputElement).value).toBe('')
+    expect(screen.queryByDisplayValue('Editado sem salvar')).toBeNull()
+  })
 })

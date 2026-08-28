@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 
 type EventRow = { id: string; name: string; slug: string; eventDate: string; photoCount: number }
@@ -11,11 +11,15 @@ export default function AdminEventsPage() {
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState({ name: '', slug: '', eventDate: '' })
+  const [createForm, setCreateForm] = useState({ name: '', slug: '', eventDate: '' })
+  const [editForm, setEditForm] = useState({ name: '', slug: '', eventDate: '' })
   const [submitting, setSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const loadingRef = useRef(false)
 
   async function loadEvents() {
+    if (loadingRef.current) return
+    loadingRef.current = true
     setLoading(true)
     try {
       const response = await fetch('/api/admin/events')
@@ -29,6 +33,7 @@ export default function AdminEventsPage() {
       setError('Erro ao carregar eventos.')
     } finally {
       setLoading(false)
+      loadingRef.current = false
     }
   }
 
@@ -46,7 +51,7 @@ export default function AdminEventsPage() {
       const response = await fetch('/api/admin/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(createForm),
       })
 
       if (!response.ok) {
@@ -54,7 +59,7 @@ export default function AdminEventsPage() {
         return
       }
 
-      setForm({ name: '', slug: '', eventDate: '' })
+      setCreateForm({ name: '', slug: '', eventDate: '' })
       setCreating(false)
       await loadEvents()
     } catch {
@@ -73,7 +78,7 @@ export default function AdminEventsPage() {
       const response = await fetch(`/api/admin/events/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name, eventDate: form.eventDate }),
+        body: JSON.stringify({ name: editForm.name, eventDate: editForm.eventDate }),
       })
 
       if (!response.ok) {
@@ -116,8 +121,14 @@ export default function AdminEventsPage() {
   }
 
   function startEdit(event: EventRow) {
+    setCreating(false)
     setEditingId(event.id)
-    setForm({ name: event.name, slug: event.slug, eventDate: event.eventDate })
+    setEditForm({ name: event.name, slug: event.slug, eventDate: event.eventDate })
+  }
+
+  function toggleCreating() {
+    setEditingId(null)
+    setCreating((c) => !c)
   }
 
   return (
@@ -125,20 +136,30 @@ export default function AdminEventsPage() {
       <h1 className="text-2xl font-semibold mb-4">Eventos</h1>
       {error && <p role="alert">{error}</p>}
 
-      <button onClick={() => setCreating((c) => !c)}>{creating ? 'Cancelar' : 'Criar evento'}</button>
+      <button onClick={toggleCreating}>{creating ? 'Cancelar' : 'Criar evento'}</button>
 
       {creating && (
         <form onSubmit={handleCreate}>
           <label htmlFor="new-name">Nome</label>
-          <input id="new-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          <input
+            id="new-name"
+            value={createForm.name}
+            onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+            required
+          />
           <label htmlFor="new-slug">Slug</label>
-          <input id="new-slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required />
+          <input
+            id="new-slug"
+            value={createForm.slug}
+            onChange={(e) => setCreateForm({ ...createForm, slug: e.target.value })}
+            required
+          />
           <label htmlFor="new-date">Data</label>
           <input
             id="new-date"
             type="date"
-            value={form.eventDate}
-            onChange={(e) => setForm({ ...form, eventDate: e.target.value })}
+            value={createForm.eventDate}
+            onChange={(e) => setCreateForm({ ...createForm, eventDate: e.target.value })}
             required
           />
           <button type="submit" disabled={submitting}>Salvar</button>
@@ -162,13 +183,13 @@ export default function AdminEventsPage() {
               editingId === event.id ? (
                 <tr key={event.id}>
                   <td>
-                    <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                    <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
                   </td>
                   <td>
                     <input
                       type="date"
-                      value={form.eventDate}
-                      onChange={(e) => setForm({ ...form, eventDate: e.target.value })}
+                      value={editForm.eventDate}
+                      onChange={(e) => setEditForm({ ...editForm, eventDate: e.target.value })}
                     />
                   </td>
                   <td>{event.photoCount}</td>
