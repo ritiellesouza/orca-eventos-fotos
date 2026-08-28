@@ -1,6 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseClient'
 
+type EventRow = {
+  id: string
+  name: string
+  slug: string
+  event_date: string
+  photos: { count: number }[]
+}
+
+export async function GET() {
+  const { data, error } = await supabaseAdmin()
+    .from('events')
+    .select('id, name, slug, event_date, photos(count)')
+    .order('event_date', { ascending: false })
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  const events = ((data ?? []) as EventRow[]).map((row) => ({
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    eventDate: row.event_date,
+    photoCount: row.photos?.[0]?.count ?? 0,
+  }))
+
+  return NextResponse.json({ events })
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json()
   const { name, slug, eventDate } = body
