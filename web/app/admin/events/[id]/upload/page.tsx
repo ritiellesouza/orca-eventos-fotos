@@ -2,6 +2,7 @@
 
 import { useRef, useState, type DragEvent } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 
 type UploadResult = {
   uploaded: { filename: string; id: string; hasFace: boolean }[]
@@ -58,6 +59,7 @@ export default function AdminUploadPage() {
 
   return (
     <main className="max-w-3xl mx-auto p-4">
+      <Link href="/admin/events">← Eventos</Link>
       <h1 className="text-2xl font-semibold mb-4">Subir fotos</h1>
       <div
         onDragOver={(e) => e.preventDefault()}

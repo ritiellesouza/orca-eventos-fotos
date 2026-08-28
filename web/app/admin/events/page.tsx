@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 type EventRow = { id: string; name: string; slug: string; eventDate: string; photoCount: number }
 
@@ -28,7 +29,9 @@ export default function AdminEventsPage() {
   const [editForm, setEditForm] = useState({ name: '', slug: '', eventDate: '' })
   const [submitting, setSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [loggingOut, setLoggingOut] = useState(false)
   const loadingRef = useRef(false)
+  const router = useRouter()
 
   async function loadEvents() {
     if (loadingRef.current) return
@@ -133,6 +136,21 @@ export default function AdminEventsPage() {
     }
   }
 
+  async function handleLogout() {
+    if (loggingOut) return
+    setLoggingOut(true)
+
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' })
+    } catch {
+      // The cookie may still be set, but leaving the user stuck on a page they
+      // asked to leave is worse — the login page is the right place either way.
+    } finally {
+      setLoggingOut(false)
+      router.push('/admin/login')
+    }
+  }
+
   function startEdit(event: EventRow) {
     setCreating(false)
     setEditingId(event.id)
@@ -150,6 +168,7 @@ export default function AdminEventsPage() {
       {error && <p role="alert">{error}</p>}
 
       <button onClick={toggleCreating}>{creating ? 'Cancelar' : 'Criar evento'}</button>
+      <button onClick={handleLogout} disabled={loggingOut}>Sair</button>
 
       {creating && (
         <form onSubmit={handleCreate}>

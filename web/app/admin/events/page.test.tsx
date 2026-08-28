@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
+const push = vi.fn()
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push }),
 }))
 
 import AdminEventsPage from './page'
@@ -15,6 +17,7 @@ const EVENTS_RESPONSE = {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  push.mockClear()
 })
 
 describe('AdminEventsPage', () => {
@@ -243,6 +246,35 @@ describe('AdminEventsPage', () => {
     resolveDelete(new Response(JSON.stringify({ ok: true }), { status: 200 }))
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+  })
+
+  it('logs out and redirects to the login page', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: /^sair$/i }))
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/admin/login'))
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/admin/logout')
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'POST' })
+  })
+
+  it('still redirects to the login page when the logout request fails', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+
+    render(<AdminEventsPage />)
+    await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: /^sair$/i }))
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/admin/login'))
   })
 
   it('does not leak an in-progress create draft into the row being edited', async () => {

@@ -16,6 +16,11 @@ function fileInput(): HTMLInputElement {
 }
 
 describe('AdminUploadPage', () => {
+  it('links back to the event list', () => {
+    render(<AdminUploadPage />)
+    expect(screen.getByRole('link', { name: /eventos/i })).toHaveAttribute('href', '/admin/events')
+  })
+
   it('disables the upload button until files are selected', () => {
     render(<AdminUploadPage />)
     expect(screen.getByRole('button', { name: /subir/i })).toHaveProperty('disabled', true)
