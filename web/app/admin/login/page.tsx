@@ -6,24 +6,33 @@ import { useRouter } from 'next/navigation'
 export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
   const router = useRouter()
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (submitting) return
     setError(null)
+    setSubmitting(true)
 
-    const response = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    })
+    try {
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
 
-    if (!response.ok) {
-      setError('Senha incorreta.')
-      return
+      if (!response.ok) {
+        setError('Senha incorreta.')
+        return
+      }
+
+      router.push('/admin/events')
+    } catch {
+      setError('Erro ao conectar. Tente novamente.')
+    } finally {
+      setSubmitting(false)
     }
-
-    router.push('/admin/events')
   }
 
   return (
@@ -38,7 +47,7 @@ export default function AdminLoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
         {error && <p role="alert">{error}</p>}
-        <button type="submit">Entrar</button>
+        <button type="submit" disabled={submitting}>Entrar</button>
       </form>
     </main>
   )
