@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type DragEvent } from 'react'
+import { useRef, useState, type DragEvent } from 'react'
 import { useParams } from 'next/navigation'
 
 type UploadResult = {
@@ -14,6 +14,7 @@ export default function AdminUploadPage() {
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState<UploadResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleDrop(e: DragEvent) {
     e.preventDefault()
@@ -41,6 +42,13 @@ export default function AdminUploadPage() {
 
       const data: UploadResult = await response.json()
       setResult(data)
+      // Clear the batch: `photos` has no unique constraint on the storage key,
+      // so a second click on the same selection would create duplicate photo
+      // rows (and duplicate face embeddings) for the same file.
+      setFiles([])
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     } catch {
       setError('Erro ao subir fotos.')
     } finally {
@@ -58,7 +66,13 @@ export default function AdminUploadPage() {
       >
         {files.length > 0 ? `${files.length} arquivo(s) selecionado(s)` : 'Arraste as fotos aqui'}
       </div>
-      <input type="file" multiple accept="image/*" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/*"
+        onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+      />
       <button onClick={handleUpload} disabled={files.length === 0 || uploading}>
         {uploading ? 'Enviando...' : `Subir ${files.length} foto(s)`}
       </button>

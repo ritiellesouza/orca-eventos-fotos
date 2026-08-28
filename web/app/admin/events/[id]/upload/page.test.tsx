@@ -49,6 +49,30 @@ describe('AdminUploadPage', () => {
     expect(body.getAll('photos')).toHaveLength(2)
   })
 
+  it('clears the selection after a successful upload so the batch cannot be sent twice', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ uploaded: [{ filename: 'foto1.jpg', id: 'p1', hasFace: true }], failed: [] }),
+        { status: 200 }
+      )
+    )
+
+    render(<AdminUploadPage />)
+
+    fireEvent.change(fileInput(), {
+      target: { files: [new File(['a'], 'foto1.jpg', { type: 'image/jpeg' })] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /subir/i }))
+
+    await waitFor(() => expect(screen.getByText(/1 enviada/i)).toBeTruthy())
+
+    const button = screen.getByRole('button', { name: /subir/i })
+    expect(button.textContent).toBe('Subir 0 foto(s)')
+    expect(button).toHaveProperty('disabled', true)
+    expect(fileInput().value).toBe('')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('shows a generic error on a network failure', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('network down'))
 
