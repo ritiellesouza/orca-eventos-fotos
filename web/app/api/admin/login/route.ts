@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'invalid_password' }, { status: 401 })
   }
 
-  const password = body?.password
+  const password = (body as { password?: unknown } | null)?.password
   const expected = process.env.ADMIN_TOKEN
 
   if (!expected || typeof password !== 'string' || !tokensMatch(password, expected)) {
