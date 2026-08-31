@@ -3,6 +3,8 @@
 import { useRef, useState, type DragEvent } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { BrandHeader } from '@/components/BrandHeader'
+import { Button } from '@/components/Button'
 
 type UploadResult = {
   uploaded: { filename: string; id: string; hasFace: boolean }[]
@@ -58,43 +60,53 @@ export default function AdminUploadPage() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto p-4">
-      <Link href="/admin/events">← Eventos</Link>
-      <h1 className="text-2xl font-semibold mb-4">Subir fotos</h1>
-      <div
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}
-        style={{ border: '2px dashed #ccc', padding: '2rem', textAlign: 'center' }}
-      >
-        {files.length > 0 ? `${files.length} arquivo(s) selecionado(s)` : 'Arraste as fotos aqui'}
-      </div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept="image/*"
-        onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-      />
-      <button onClick={handleUpload} disabled={files.length === 0 || uploading}>
-        {uploading ? 'Enviando...' : `Subir ${files.length} foto(s)`}
-      </button>
-      {error && <p role="alert">{error}</p>}
-      {result && (
-        <div>
-          <p>
-            {result.uploaded.length} enviada(s) com sucesso, {result.failed.length} falharam.
-          </p>
-          {result.failed.length > 0 && (
-            <ul>
-              {result.failed.map((f) => (
-                <li key={f.filename}>
-                  {f.filename}: {f.error}
-                </li>
-              ))}
-            </ul>
-          )}
+    <>
+      <BrandHeader />
+      <main className="max-w-3xl mx-auto p-4">
+        <Link href="/admin/events" className="text-orca-verde-agua underline">
+          ← Eventos
+        </Link>
+        <h1 className="text-2xl font-extrabold text-orca-azul-escuro mb-4 mt-2">Subir fotos</h1>
+        <div
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={handleDrop}
+          className="border-2 border-dashed border-orca-dourado rounded-[15px] p-8 text-center mb-4 text-orca-preto-marca/70"
+        >
+          {files.length > 0 ? `${files.length} arquivo(s) selecionado(s)` : 'Arraste as fotos aqui'}
         </div>
-      )}
-    </main>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+          className="mb-4 block"
+        />
+        <Button onClick={handleUpload} disabled={files.length === 0 || uploading}>
+          {uploading ? 'Enviando...' : `Subir ${files.length} foto(s)`}
+        </Button>
+        {error && (
+          <p role="alert" className="text-red-700 mt-3">
+            {error}
+          </p>
+        )}
+        {result && (
+          <div className="mt-4">
+            <p>
+              {result.uploaded.length} enviada(s) com sucesso, {result.failed.length} falharam.
+            </p>
+            {result.failed.length > 0 && (
+              <ul className="mt-2 list-disc list-inside text-red-700">
+                {result.failed.map((f) => (
+                  <li key={f.filename}>
+                    {f.filename}: {f.error}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </main>
+    </>
   )
 }
