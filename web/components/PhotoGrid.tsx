@@ -24,7 +24,7 @@ export function PhotoGrid({
             key={photo.photoId}
             onClick={() => onToggle(photo.photoId)}
             aria-pressed={isSelected}
-            className={`relative border-2 rounded ${isSelected ? 'border-blue-500' : 'border-transparent'}`}
+            className={`relative border-2 rounded ${isSelected ? 'border-orca-dourado' : 'border-transparent'}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img

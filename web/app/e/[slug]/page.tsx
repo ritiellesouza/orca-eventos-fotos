@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { SelfieUploader } from '@/components/SelfieUploader'
+import { BrandHeader } from '@/components/BrandHeader'
 import { supabaseAdmin } from '@/lib/supabaseClient'
 
 // Without this, Next.js treats this route as static-if-possible (it only
@@ -17,9 +18,14 @@ export default async function EventPage({ params }: { params: { slug: string } }
   }
 
   return (
-    <main className="max-w-4xl mx-auto p-4">
-      <h1 className="text-2xl font-semibold mb-4">Encontre suas fotos</h1>
-      <SelfieUploader slug={params.slug} eventId={event.id} />
-    </main>
+    <>
+      <BrandHeader />
+      <main>
+        <h1 className="text-2xl font-extrabold text-orca-azul-escuro text-center mt-6 mb-2">
+          Encontre suas fotos
+        </h1>
+        <SelfieUploader slug={params.slug} eventId={event.id} />
+      </main>
+    </>
   )
 }

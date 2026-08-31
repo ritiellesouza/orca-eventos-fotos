@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { PhotoGrid } from './PhotoGrid'
+import { Button } from './Button'
 import { formatTotalBRL } from '@/lib/pricing'
 
 type PhotoResult = { photoId: string; previewUrl: string }
@@ -117,9 +118,12 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
 
   if (!consented) {
     return (
-      <div>
-        <p>Para achar suas fotos, vamos processar uma selfie sua apenas para comparação facial neste evento. Os dados são processados em servidor próprio da Orca Mídias e removidos após 120 dias.</p>
-        <button onClick={() => setConsented(true)}>Concordo, continuar</button>
+      <div className="max-w-md mx-auto p-4 text-center">
+        <p className="mb-4">
+          Para achar suas fotos, vamos processar uma selfie sua apenas para comparação facial neste evento. Os
+          dados são processados em servidor próprio da Orca Mídias e removidos após 120 dias.
+        </p>
+        <Button onClick={() => setConsented(true)}>Concordo, continuar</Button>
       </div>
     )
   }
@@ -133,33 +137,45 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
   const emailIsValid = EMAIL_PATTERN.test(email)
 
   return (
-    <div>
+    <div className="max-w-4xl mx-auto p-4">
       <input
         type="file"
         accept="image/*"
         capture="user"
         onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+        className="mb-4"
       />
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert" className="text-red-700 mb-4">
+          {error}
+        </p>
+      )}
       {results && <PhotoGrid photos={results} selected={selected} onToggle={toggle} />}
       {selected.size > 0 && (
-        <div>
-          <p>
+        <div className="sticky bottom-0 bg-white border-t border-orca-dourado/30 mt-4 p-4">
+          <p className="mb-2">
             {selected.size} {selected.size === 1 ? 'foto selecionada' : 'fotos selecionadas'}
             {unitPriceCents !== null && <> · {formatTotalBRL(unitPriceCents, selected.size)}</>}
           </p>
-          <label htmlFor="buyer-email">Seu e-mail</label>
+          <label htmlFor="buyer-email" className="block mb-1">
+            Seu e-mail
+          </label>
           <input
             id="buyer-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="voce@exemplo.com"
+            className="border rounded px-3 py-2 mb-3 w-full max-w-sm"
           />
-          <button onClick={handleCheckout} disabled={!emailIsValid || checkoutInFlight}>
+          <Button onClick={handleCheckout} disabled={!emailIsValid || checkoutInFlight}>
             Comprar
-          </button>
-          {checkoutError && <p role="alert">{checkoutError}</p>}
+          </Button>
+          {checkoutError && (
+            <p role="alert" className="text-red-700 mt-2">
+              {checkoutError}
+            </p>
+          )}
         </div>
       )}
     </div>
