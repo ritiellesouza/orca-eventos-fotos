@@ -12,7 +12,7 @@ export default function HomePage() {
           A Orca Mídias fotografa seu evento e usa reconhecimento facial para
           você achar suas fotos em segundos — sem precisar procurar.
         </p>
-        <p className="font-caveat text-2xl text-orca-dourado mb-8">
+        <p className="font-caveat text-2xl text-orca-preto-marca mb-8">
           Você recebeu o link do seu evento? É só abrir e tirar uma selfie.
         </p>
         <p>

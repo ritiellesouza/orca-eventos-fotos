@@ -8,7 +8,10 @@ export default async function ObrigadoPage({ searchParams }: { searchParams: { s
     return (
       <>
         <BrandHeader />
-        <p className="max-w-2xl mx-auto p-4">Sessão inválida.</p>
+        <main className="max-w-2xl mx-auto p-4">
+          <h1 className="text-2xl font-extrabold text-orca-azul-escuro mb-4">Sessão inválida</h1>
+          <p>Sessão inválida.</p>
+        </main>
       </>
     )
   }
@@ -24,7 +27,10 @@ export default async function ObrigadoPage({ searchParams }: { searchParams: { s
     return (
       <>
         <BrandHeader />
-        <p className="max-w-2xl mx-auto p-4">Pagamento ainda não confirmado. Atualize a página em instantes.</p>
+        <main className="max-w-2xl mx-auto p-4">
+          <h1 className="text-2xl font-extrabold text-orca-azul-escuro mb-4">Aguardando confirmação</h1>
+          <p>Pagamento ainda não confirmado. Atualize a página em instantes.</p>
+        </main>
       </>
     )
   }
