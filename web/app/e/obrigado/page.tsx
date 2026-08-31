@@ -49,7 +49,7 @@ export default async function ObrigadoPage({ searchParams }: { searchParams: { s
         <ul className="space-y-2">
           {links.map((url, i) => (
             <li key={i}>
-              <a href={url} className="text-orca-verde-agua underline font-semibold">
+              <a href={url} className="text-orca-royal underline font-semibold">
                 Baixar foto {i + 1}
               </a>
             </li>

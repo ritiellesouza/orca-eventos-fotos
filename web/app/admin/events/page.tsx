@@ -270,7 +270,7 @@ export default function AdminEventsPage() {
                     <td className="py-2">{event.eventDate}</td>
                     <td className="py-2">{event.photoCount}</td>
                     <td className="py-2 space-x-2">
-                      <Link href={`/admin/events/${event.id}/upload`} className="text-orca-verde-agua underline">
+                      <Link href={`/admin/events/${event.id}/upload`} className="text-orca-royal underline">
                         Subir fotos
                       </Link>
                       <Button variant="secondary" onClick={() => startEdit(event)}>

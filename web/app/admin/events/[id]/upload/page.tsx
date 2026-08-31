@@ -63,7 +63,7 @@ export default function AdminUploadPage() {
     <>
       <BrandHeader />
       <main className="max-w-3xl mx-auto p-4">
-        <Link href="/admin/events" className="text-orca-verde-agua underline">
+        <Link href="/admin/events" className="text-orca-royal underline">
           ← Eventos
         </Link>
         <h1 className="text-2xl font-extrabold text-orca-azul-escuro mb-4 mt-2">Subir fotos</h1>
