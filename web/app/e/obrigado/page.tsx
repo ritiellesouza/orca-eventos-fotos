@@ -1,10 +1,16 @@
+import { BrandHeader } from '@/components/BrandHeader'
 import { supabaseAdmin } from '@/lib/supabaseClient'
 import { getSignedDownloadUrl } from '@/lib/storage'
 
 export default async function ObrigadoPage({ searchParams }: { searchParams: { session_id?: string } }) {
   const sessionId = searchParams.session_id
   if (!sessionId) {
-    return <p>Sessão inválida.</p>
+    return (
+      <>
+        <BrandHeader />
+        <p className="max-w-2xl mx-auto p-4">Sessão inválida.</p>
+      </>
+    )
   }
 
   const db = supabaseAdmin()
@@ -15,7 +21,12 @@ export default async function ObrigadoPage({ searchParams }: { searchParams: { s
     .single()
 
   if (!purchase || purchase.status !== 'paid') {
-    return <p>Pagamento ainda não confirmado. Atualize a página em instantes.</p>
+    return (
+      <>
+        <BrandHeader />
+        <p className="max-w-2xl mx-auto p-4">Pagamento ainda não confirmado. Atualize a página em instantes.</p>
+      </>
+    )
   }
 
   const { data: purchasedPhotos } = await db
@@ -31,18 +42,21 @@ export default async function ObrigadoPage({ searchParams }: { searchParams: { s
   )
 
   return (
-    <main className="max-w-2xl mx-auto p-4">
-      <h1 className="text-2xl font-semibold mb-4">Pagamento confirmado!</h1>
-      <ul>
-        {links.map((url, i) => (
-          <li key={i}>
-            <a href={url} className="text-blue-600 underline">
-              Baixar foto {i + 1}
-            </a>
-          </li>
-        ))}
-      </ul>
-      <p className="text-sm text-gray-500 mt-4">Os links expiram em algumas horas.</p>
-    </main>
+    <>
+      <BrandHeader />
+      <main className="max-w-2xl mx-auto p-4">
+        <h1 className="text-2xl font-extrabold text-orca-azul-escuro mb-4">Pagamento confirmado!</h1>
+        <ul className="space-y-2">
+          {links.map((url, i) => (
+            <li key={i}>
+              <a href={url} className="text-orca-verde-agua underline font-semibold">
+                Baixar foto {i + 1}
+              </a>
+            </li>
+          ))}
+        </ul>
+        <p className="text-sm text-orca-preto-marca/70 mt-4">Os links expiram em algumas horas.</p>
+      </main>
+    </>
   )
 }
