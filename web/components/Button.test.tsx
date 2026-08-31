@@ -16,6 +16,13 @@ describe('Button', () => {
     expect(button.className).not.toContain('bg-orca-verde-agua')
   })
 
+  it('renders the destructive variant with a plain red background', () => {
+    render(<Button variant="destructive">Apagar</Button>)
+    const button = screen.getByRole('button', { name: 'Apagar' })
+    expect(button.className).toContain('bg-red-700')
+    expect(button.className).not.toContain('bg-orca-verde-agua')
+  })
+
   it('forwards standard button props (type, disabled)', () => {
     render(
       <Button type="submit" disabled>
