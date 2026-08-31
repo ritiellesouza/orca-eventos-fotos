@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { BrandHeader } from '@/components/BrandHeader'
+import { Button } from '@/components/Button'
 
 type EventRow = { id: string; name: string; slug: string; eventDate: string; photoCount: number }
 
@@ -163,89 +165,128 @@ export default function AdminEventsPage() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto p-4">
-      <h1 className="text-2xl font-semibold mb-4">Eventos</h1>
-      {error && <p role="alert">{error}</p>}
+    <>
+      <BrandHeader />
+      <main className="max-w-3xl mx-auto p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-extrabold text-orca-azul-escuro">Eventos</h1>
+          <Button variant="secondary" onClick={handleLogout} disabled={loggingOut}>
+            Sair
+          </Button>
+        </div>
+        {error && (
+          <p role="alert" className="text-red-700 mb-3">
+            {error}
+          </p>
+        )}
 
-      <button onClick={toggleCreating}>{creating ? 'Cancelar' : 'Criar evento'}</button>
-      <button onClick={handleLogout} disabled={loggingOut}>Sair</button>
+        <Button variant="secondary" onClick={toggleCreating} className="mb-4">
+          {creating ? 'Cancelar' : 'Criar evento'}
+        </Button>
 
-      {creating && (
-        <form onSubmit={handleCreate}>
-          <label htmlFor="new-name">Nome</label>
-          <input
-            id="new-name"
-            value={createForm.name}
-            onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-            required
-          />
-          <label htmlFor="new-slug">Slug</label>
-          <input
-            id="new-slug"
-            value={createForm.slug}
-            onChange={(e) => setCreateForm({ ...createForm, slug: e.target.value })}
-            required
-          />
-          <label htmlFor="new-date">Data</label>
-          <input
-            id="new-date"
-            type="date"
-            value={createForm.eventDate}
-            onChange={(e) => setCreateForm({ ...createForm, eventDate: e.target.value })}
-            required
-          />
-          <button type="submit" disabled={submitting}>Salvar</button>
-        </form>
-      )}
+        {creating && (
+          <form onSubmit={handleCreate} className="mb-6 border border-orca-dourado/30 rounded p-4">
+            <label htmlFor="new-name" className="block mb-1">
+              Nome
+            </label>
+            <input
+              id="new-name"
+              value={createForm.name}
+              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+              required
+              className="border rounded px-3 py-2 mb-3 w-full"
+            />
+            <label htmlFor="new-slug" className="block mb-1">
+              Slug
+            </label>
+            <input
+              id="new-slug"
+              value={createForm.slug}
+              onChange={(e) => setCreateForm({ ...createForm, slug: e.target.value })}
+              required
+              className="border rounded px-3 py-2 mb-3 w-full"
+            />
+            <label htmlFor="new-date" className="block mb-1">
+              Data
+            </label>
+            <input
+              id="new-date"
+              type="date"
+              value={createForm.eventDate}
+              onChange={(e) => setCreateForm({ ...createForm, eventDate: e.target.value })}
+              required
+              className="border rounded px-3 py-2 mb-3 w-full"
+            />
+            <Button type="submit" disabled={submitting}>
+              Salvar
+            </Button>
+          </form>
+        )}
 
-      {loading ? (
-        <p>Carregando...</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Data</th>
-              <th>Fotos</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {events.map((event) =>
-              editingId === event.id ? (
-                <tr key={event.id}>
-                  <td>
-                    <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
-                  </td>
-                  <td>
-                    <input
-                      type="date"
-                      value={editForm.eventDate}
-                      onChange={(e) => setEditForm({ ...editForm, eventDate: e.target.value })}
-                    />
-                  </td>
-                  <td>{event.photoCount}</td>
-                  <td>
-                    <button onClick={() => handleUpdate(event.id)} disabled={submitting}>Salvar</button>
-                    <button onClick={() => setEditingId(null)} disabled={submitting}>Cancelar</button>
-                  </td>
-                </tr>
-              ) : (
-                <tr key={event.id}>
-                  <td>{event.name}</td>
-                  <td>{event.eventDate}</td>
-                  <td>{event.photoCount}</td>
-                  <td>
-                    <Link href={`/admin/events/${event.id}/upload`}>Subir fotos</Link>
-                    <button onClick={() => startEdit(event)}>Editar</button>
-                    <button onClick={() => handleDelete(event.id)} disabled={deletingId === event.id}>Apagar</button>
-                  </td>
-                </tr>
-              )
-            )}
-          </tbody>
-        </table>
-      )}
-    </main>
+        {loading ? (
+          <p>Carregando...</p>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-orca-dourado/30">
+                <th className="py-2">Nome</th>
+                <th className="py-2">Data</th>
+                <th className="py-2">Fotos</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((event) =>
+                editingId === event.id ? (
+                  <tr key={event.id} className="border-b border-orca-dourado/10">
+                    <td className="py-2">
+                      <input
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        className="border rounded px-2 py-1"
+                      />
+                    </td>
+                    <td className="py-2">
+                      <input
+                        type="date"
+                        value={editForm.eventDate}
+                        onChange={(e) => setEditForm({ ...editForm, eventDate: e.target.value })}
+                        className="border rounded px-2 py-1"
+                      />
+                    </td>
+                    <td className="py-2">{event.photoCount}</td>
+                    <td className="py-2 space-x-2">
+                      <Button onClick={() => handleUpdate(event.id)} disabled={submitting}>
+                        Salvar
+                      </Button>
+                      <Button variant="secondary" onClick={() => setEditingId(null)} disabled={submitting}>
+                        Cancelar
+                      </Button>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={event.id} className="border-b border-orca-dourado/10">
+                    <td className="py-2">{event.name}</td>
+                    <td className="py-2">{event.eventDate}</td>
+                    <td className="py-2">{event.photoCount}</td>
+                    <td className="py-2 space-x-2">
+                      <Link href={`/admin/events/${event.id}/upload`} className="text-orca-verde-agua underline">
+                        Subir fotos
+                      </Link>
+                      <Button variant="secondary" onClick={() => startEdit(event)}>
+                        Editar
+                      </Button>
+                      <Button variant="secondary" onClick={() => handleDelete(event.id)} disabled={deletingId === event.id}>
+                        Apagar
+                      </Button>
+                    </td>
+                  </tr>
+                )
+              )}
+            </tbody>
+          </table>
+        )}
+      </main>
+    </>
   )
 }
