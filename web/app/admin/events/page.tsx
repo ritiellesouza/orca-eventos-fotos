@@ -180,7 +180,7 @@ export default function AdminEventsPage() {
           </p>
         )}
 
-        <Button variant="secondary" onClick={toggleCreating} className="mb-4">
+        <Button variant={creating ? 'secondary' : 'primary'} onClick={toggleCreating} className="mb-4">
           {creating ? 'Cancelar' : 'Criar evento'}
         </Button>
 
@@ -276,7 +276,7 @@ export default function AdminEventsPage() {
                       <Button variant="secondary" onClick={() => startEdit(event)}>
                         Editar
                       </Button>
-                      <Button variant="secondary" onClick={() => handleDelete(event.id)} disabled={deletingId === event.id}>
+                      <Button variant="destructive" onClick={() => handleDelete(event.id)} disabled={deletingId === event.id}>
                         Apagar
                       </Button>
                     </td>
