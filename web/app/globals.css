@@ -17,3 +17,12 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Toggled on <body> by useScreenshotGuard's window blur/focus listeners
+   (component, not React state -- see that file's comment for why). No
+   transition: a screenshot tool can grab its frame within the same window a
+   CSS transition would still be ramping up in, so the blur must be instant,
+   not eased in. */
+.screenshot-protecao .foto-protegida {
+  filter: blur(16px);
+}

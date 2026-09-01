@@ -1,6 +1,6 @@
 'use client'
 
-import { useBlurOnFocusLoss } from './useBlurOnFocusLoss'
+import { useScreenshotGuard } from './useScreenshotGuard'
 
 type PhotoResult = { photoId: string; previewUrl: string }
 
@@ -13,7 +13,12 @@ export function PhotoGrid({
   selected: Set<string>
   onToggle: (photoId: string) => void
 }) {
-  const isBlurred = useBlurOnFocusLoss()
+  // Blurs every .foto-protegida image on window blur -- see the CSS rule in
+  // globals.css. This toggles a class on document.body directly from the
+  // browser's own event listener, not through this component's render, so
+  // there's no React re-render standing between the blur event and the
+  // pixels actually changing.
+  useScreenshotGuard()
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -30,7 +35,7 @@ export function PhotoGrid({
             <img
               src={photo.previewUrl}
               alt={`Foto ${index + 1}${isSelected ? ' (selecionada)' : ''}`}
-              className={`w-full h-full object-cover rounded transition-all ${isBlurred ? 'blur-lg' : ''}`}
+              className="foto-protegida w-full h-full object-cover rounded"
             />
             {/* Decorative only -- aria-pressed on the button above already
                 communicates selection state to assistive tech. */}
