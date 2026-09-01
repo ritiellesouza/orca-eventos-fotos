@@ -24,6 +24,16 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# Docker ENV values don't carry across build stages -- the builder stage's
+# NEXT_PUBLIC_* vars above only baked into the client bundle. Server-side
+# code that reads these at request time (e.g. requireEnv('NEXT_PUBLIC_R2_
+# PUBLIC_URL') in api/events/[slug]/search/route.ts) needs them present in
+# *this* container's actual environment too, or it throws "Missing required
+# environment variable" on every request. Same non-secret values as above.
+ENV NEXT_PUBLIC_SUPABASE_URL=http://kong:8000
+ENV NEXT_PUBLIC_R2_PUBLIC_URL=https://pub-5e8d8563144a49b689989e38b1b2b92f.r2.dev
+ENV NEXT_PUBLIC_SITE_URL=https://clicka.orcamidias.com
+ENV NEXT_PUBLIC_PHOTO_PRICE_CENTS=1500
 RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 # public/ holds the Orca Mídias logo (added in 4dc277f) that BrandHeader
 # renders via next/image — Next's standalone output doesn't include static
