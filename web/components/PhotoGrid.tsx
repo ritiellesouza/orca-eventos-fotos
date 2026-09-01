@@ -32,6 +32,15 @@ export function PhotoGrid({
               alt={`Foto ${index + 1}${isSelected ? ' (selecionada)' : ''}`}
               className={`w-full h-full object-cover rounded transition-all ${isBlurred ? 'blur-lg' : ''}`}
             />
+            {/* Decorative only -- aria-pressed on the button above already
+                communicates selection state to assistive tech. */}
+            <span
+              aria-hidden="true"
+              data-testid="photo-checkbox"
+              className={`absolute top-2 right-2 w-5 h-5 rounded border-2 ${
+                isSelected ? 'bg-orca-verde-agua border-orca-verde-agua' : 'bg-white/80 border-white'
+              }`}
+            />
           </button>
         )
       })}
