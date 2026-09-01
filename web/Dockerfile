@@ -25,9 +25,11 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
-# No `public/` dir exists in this project (create-next-app@14 --no-src-dir
-# never generated one) — if you add static assets under web/public later,
-# add `COPY --from=builder /app/public ./public` back here.
+# public/ holds the Orca Mídias logo (added in 4dc277f) that BrandHeader
+# renders via next/image — Next's standalone output doesn't include static
+# assets automatically, so without this copy the logo 404s at runtime and
+# the image optimizer fails with "received null".
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
