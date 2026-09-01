@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { SelfieUploader } from '@/components/SelfieUploader'
 import { BrandHeader } from '@/components/BrandHeader'
+import { EventBanner } from '@/components/EventBanner'
 import { supabaseAdmin } from '@/lib/supabaseClient'
 
 // Without this, Next.js treats this route as static-if-possible (it only
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function EventPage({ params }: { params: { slug: string } }) {
   const db = supabaseAdmin()
-  const { data: event } = await db.from('events').select('id').eq('slug', params.slug).single()
+  const { data: event } = await db.from('events').select('id, name').eq('slug', params.slug).single()
 
   if (!event) {
     notFound()
@@ -20,10 +21,8 @@ export default async function EventPage({ params }: { params: { slug: string } }
   return (
     <>
       <BrandHeader />
-      <main>
-        <h1 className="text-2xl font-extrabold text-orca-azul-escuro text-center mt-6 mb-2">
-          Encontre suas fotos
-        </h1>
+      <EventBanner eventName={event.name} />
+      <main className="py-8">
         <SelfieUploader slug={params.slug} eventId={event.id} />
       </main>
     </>
