@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Button } from './Button'
 
 export function CaptureModal({
@@ -13,6 +13,16 @@ export function CaptureModal({
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        onCancel()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onCancel])
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
@@ -21,9 +31,15 @@ export function CaptureModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-[15px] max-w-md w-full p-6 text-center">
-        <h2 className="text-xl font-extrabold text-orca-azul-escuro mb-2">Reconhecimento facial</h2>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onCancel}>
+      <div
+        className="bg-white rounded-[15px] max-w-md w-full p-6 text-center"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="capture-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="capture-title" className="text-xl font-extrabold text-orca-azul-escuro mb-2">Reconhecimento facial</h2>
         <p className="text-orca-preto-marca mb-6">Tire uma foto ou carregue uma foto do seu rosto.</p>
         <div className="flex gap-3 justify-center mb-4">
           <Button variant="secondary" onClick={() => galleryInputRef.current?.click()}>
@@ -31,9 +47,9 @@ export function CaptureModal({
           </Button>
           <Button onClick={() => cameraInputRef.current?.click()}>Tirar foto</Button>
         </div>
-        <button onClick={onCancel} className="text-orca-royal underline text-sm">
+        <Button variant="secondary" onClick={onCancel}>
           Cancelar
-        </button>
+        </Button>
         <input
           ref={galleryInputRef}
           type="file"
