@@ -19,10 +19,21 @@ export async function generatePreview(original: Buffer, watermarkText: string): 
     width = Math.round((height * originalWidth) / originalHeight)
   }
 
+  // Dark stroke + light fill so the text stays legible over both bright and
+  // dark parts of the photo -- a pure light fill (the original approach)
+  // nearly disappears over light skies/walls, which is exactly where a
+  // guest is most likely to crop a screenshot to.
   const watermarkSvg = Buffer.from(`
     <svg width="${width}" height="${height}">
       <style>
-        .wm { fill: rgba(255,255,255,0.35); font-size: 22px; font-family: sans-serif; }
+        .wm {
+          fill: rgba(255,255,255,0.6);
+          stroke: rgba(0,0,0,0.45);
+          stroke-width: 1px;
+          font-size: 26px;
+          font-weight: bold;
+          font-family: sans-serif;
+        }
       </style>
       ${Array.from({ length: 6 }).map((_, row) =>
         Array.from({ length: 4 }).map((_, col) =>
