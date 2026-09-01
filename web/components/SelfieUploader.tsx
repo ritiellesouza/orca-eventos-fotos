@@ -21,6 +21,7 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [email, setEmail] = useState('')
   const [checkoutInFlight, setCheckoutInFlight] = useState(false)
+  const [searching, setSearching] = useState(false)
 
   // If the buyer navigates to Stripe Checkout and then hits Back, some browsers
   // (bfcache) restore this exact page/component state instead of remounting --
@@ -40,6 +41,7 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
 
   async function handleFile(file: File) {
     setError(null)
+    setSearching(true)
     const formData = new FormData()
     formData.append('selfie', file)
     // The API rejects the request without this; the consent modal is a UI
@@ -58,6 +60,7 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
 
       if (!response.ok) {
         setError(data?.error === 'no_face_detected' ? 'Não achamos um rosto nessa foto. Tente outra, com boa iluminação.' : 'Erro ao buscar fotos.')
+        setSearching(false)
         return
       }
 
@@ -68,8 +71,10 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
       // the buyer would be billed for photos they can no longer see or deselect.
       setSelected(new Set())
       setResults(data?.results ?? [])
+      setSearching(false)
     } catch {
       setError('Erro ao buscar fotos.')
+      setSearching(false)
     }
   }
 
@@ -123,6 +128,7 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
   // Consent is asked once per component lifetime -- a search that already
   // happened (or a retry after one) skips straight to the capture modal.
   function openSearchFlow() {
+    if (searching) return
     setModalOpen(consented ? 'capture' : 'consent')
   }
 
@@ -142,7 +148,9 @@ export function SelfieUploader({ slug, eventId }: { slug: string; eventId: strin
           <p className="text-orca-preto-marca mb-6">
             Envie uma selfie para localizar todas as suas fotos usando reconhecimento facial
           </p>
-          <Button onClick={openSearchFlow}>Encontrar</Button>
+          <Button onClick={openSearchFlow} disabled={searching}>
+            {searching ? 'Buscando...' : 'Encontrar'}
+          </Button>
         </div>
       )}
 

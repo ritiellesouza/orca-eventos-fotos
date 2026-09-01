@@ -116,6 +116,30 @@ describe('SelfieUploader search flow', () => {
     // The search card is still reachable to retry -- consent isn't asked again.
     expect(screen.getByRole('button', { name: /^encontrar$/i })).toBeTruthy()
   })
+
+  it('does not ask for consent again on a second search', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ results: [{ photoId: 'photo-1', previewUrl: 'https://example.com/p1.jpg' }] }),
+        { status: 200 }
+      )
+    )
+
+    render(<SelfieUploader slug="festa-junina" eventId={EVENT_ID} />)
+    openCaptureModal()
+    fireEvent.change(galleryInput()!, {
+      target: { files: [new File(['b'], 's.jpg', { type: 'image/jpeg' })] },
+    })
+
+    // Wait for the first search to finish -- while `searching` is true the
+    // "Buscar novamente" flow could be blocked, so the button must be idle
+    // again before the second search starts.
+    await waitFor(() => expect(screen.getByAltText(/foto 1/i)).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: /buscar novamente/i }))
+
+    expect(screen.queryByRole('button', { name: /estou de acordo/i })).toBeNull()
+  })
 })
 
 describe('SelfieUploader checkout bar', () => {
