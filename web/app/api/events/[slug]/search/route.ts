@@ -5,7 +5,7 @@ import { embedImage } from '@/lib/faceService'
 import { requireEnv } from '@/lib/env'
 import { createRateLimiter } from '@/lib/rateLimit'
 
-// Bump this whenever the consent copy shown in SelfieUploader changes, so a
+// Bump this whenever the consent copy shown in ConsentModal changes, so a
 // stored consent can be traced back to the exact text the person agreed to.
 // Not exported: Next.js only allows a fixed set of named exports from a route.
 const CONSENT_TEXT_VERSION = 'v1'
