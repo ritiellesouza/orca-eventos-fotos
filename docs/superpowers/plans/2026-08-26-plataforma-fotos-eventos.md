@@ -1392,10 +1392,11 @@ git commit -m "feat: public event page with selfie search, consent gate, blur de
 - Produces: `buildCheckoutSession(deps: CheckoutDeps, eventId: string, photoIds: string[], buyerEmail: string): Promise<{ url: string }>` where:
   ```typescript
   type CheckoutDeps = {
-    createStripeSession: (params: { line_items: { price_data: object; quantity: number }[]; customer_email: string; metadata: Record<string, string>; success_url: string; cancel_url: string }) => Promise<{ url: string | null }>
+    createStripeSession: (params: { line_items: { price_data: object; quantity: number }[]; customer_email: string; metadata: Record<string, string>; success_url: string; cancel_url: string }) => Promise<{ id: string; url: string | null }>
     insertPurchase: (row: { eventId: string; stripeSessionId: string; buyerEmail: string }) => Promise<void>
   }
   ```
+  `stripeSessionId` must be the Stripe session's `id` field (e.g. `cs_test_...`) — **not** anything parsed from `url`. Task 11's webhook handler receives the real `session.id` from the Stripe event and looks up the purchase by exact match on this value; the two must agree.
 
 - [ ] **Step 1: Install Stripe SDK**
 
@@ -1417,7 +1418,7 @@ import { buildCheckoutSession, type CheckoutDeps } from './checkout'
 describe('buildCheckoutSession', () => {
   it('creates one line item per photo, records the purchase, and returns the session url', async () => {
     const deps: CheckoutDeps = {
-      createStripeSession: vi.fn().mockResolvedValue({ url: 'https://checkout.stripe.com/session-123' }),
+      createStripeSession: vi.fn().mockResolvedValue({ id: 'cs_test_123', url: 'https://checkout.stripe.com/session-123' }),
       insertPurchase: vi.fn().mockResolvedValue(undefined),
     }
 
@@ -1430,14 +1431,14 @@ describe('buildCheckoutSession', () => {
     expect(call.metadata).toEqual({ eventId: 'event-1', photoIds: 'p1,p2' })
     expect(deps.insertPurchase).toHaveBeenCalledWith({
       eventId: 'event-1',
-      stripeSessionId: expect.stringContaining('session-123'),
+      stripeSessionId: 'cs_test_123',
       buyerEmail: 'buyer@example.com',
     })
   })
 
   it('throws when Stripe returns no url', async () => {
     const deps: CheckoutDeps = {
-      createStripeSession: vi.fn().mockResolvedValue({ url: null }),
+      createStripeSession: vi.fn().mockResolvedValue({ id: 'cs_test_456', url: null }),
       insertPurchase: vi.fn(),
     }
 
@@ -1465,7 +1466,7 @@ export type CheckoutDeps = {
     metadata: Record<string, string>
     success_url: string
     cancel_url: string
-  }) => Promise<{ url: string | null }>
+  }) => Promise<{ id: string; url: string | null }>
   insertPurchase: (row: { eventId: string; stripeSessionId: string; buyerEmail: string }) => Promise<void>
 }
 
@@ -1499,7 +1500,7 @@ export async function buildCheckoutSession(
 
   await deps.insertPurchase({
     eventId,
-    stripeSessionId: session.url.split('/').pop() ?? session.url,
+    stripeSessionId: session.id,
     buyerEmail,
   })
 
@@ -1647,9 +1648,12 @@ import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabaseClient'
 import { handleCheckoutCompleted } from '@/lib/webhookHandler'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+function stripeClient() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!)
+}
 
 export async function POST(request: NextRequest) {
+  const stripe = stripeClient()
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')!
 
