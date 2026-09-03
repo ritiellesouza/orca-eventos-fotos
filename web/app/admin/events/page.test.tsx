@@ -320,4 +320,25 @@ describe('AdminEventsPage', () => {
     await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
     expect(screen.getByText(/1 evento · 42 fotos/i)).toBeTruthy()
   })
+
+  it('sums photo counts across multiple events and pluralizes "eventos"', async () => {
+    const events = [
+      { id: '1', name: 'Festa Junina', slug: 'festa-junina', eventDate: '2026-06-20', photoCount: 42 },
+      { id: '2', name: 'Aniversário', slug: 'aniversario', eventDate: '2026-07-10', photoCount: 15 },
+    ]
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({ events }), { status: 200 }))
+
+    render(<AdminEventsPage />)
+
+    await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
+    expect(screen.getByText(/2 eventos · 57 fotos/i)).toBeTruthy()
+  })
+
+  it('shows a zeroed-out summary when there are no events', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({ events: [] }), { status: 200 }))
+
+    render(<AdminEventsPage />)
+
+    await waitFor(() => expect(screen.getByText(/0 eventos · 0 fotos/i)).toBeTruthy())
+  })
 })

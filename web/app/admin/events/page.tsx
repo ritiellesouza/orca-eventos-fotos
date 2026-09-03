@@ -164,6 +164,8 @@ export default function AdminEventsPage() {
     setCreating((c) => !c)
   }
 
+  const totalPhotos = events.reduce((sum, event) => sum + event.photoCount, 0)
+
   return (
     <>
       <BrandHeader />
@@ -229,67 +231,67 @@ export default function AdminEventsPage() {
           <>
             <p className="text-sm text-orca-preto-marca/70 mb-3">
               {events.length} {events.length === 1 ? 'evento' : 'eventos'} ·{' '}
-              {events.reduce((sum, event) => sum + event.photoCount, 0)} fotos
+              {totalPhotos} {totalPhotos === 1 ? 'foto' : 'fotos'}
             </p>
             <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-orca-dourado/30">
-                <th className="py-2">Nome</th>
-                <th className="py-2">Data</th>
-                <th className="py-2">Fotos</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((event) =>
-                editingId === event.id ? (
-                  <tr key={event.id} className="border-b border-orca-dourado/10">
-                    <td className="py-2">
-                      <input
-                        value={editForm.name}
-                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                        className="border rounded px-2 py-1"
-                      />
-                    </td>
-                    <td className="py-2">
-                      <input
-                        type="date"
-                        value={editForm.eventDate}
-                        onChange={(e) => setEditForm({ ...editForm, eventDate: e.target.value })}
-                        className="border rounded px-2 py-1"
-                      />
-                    </td>
-                    <td className="py-2">{event.photoCount}</td>
-                    <td className="py-2 space-x-2">
-                      <Button onClick={() => handleUpdate(event.id)} disabled={submitting}>
-                        Salvar
-                      </Button>
-                      <Button variant="secondary" onClick={() => setEditingId(null)} disabled={submitting}>
-                        Cancelar
-                      </Button>
-                    </td>
-                  </tr>
-                ) : (
-                  <tr key={event.id} className="border-b border-orca-dourado/10">
-                    <td className="py-2">{event.name}</td>
-                    <td className="py-2">{event.eventDate}</td>
-                    <td className="py-2">{event.photoCount}</td>
-                    <td className="py-2 space-x-2">
-                      <Link href={`/admin/events/${event.id}/upload`} className="text-orca-royal underline">
-                        Subir fotos
-                      </Link>
-                      <Button variant="secondary" onClick={() => startEdit(event)}>
-                        Editar
-                      </Button>
-                      <Button variant="destructive" onClick={() => handleDelete(event.id)} disabled={deletingId === event.id}>
-                        Apagar
-                      </Button>
-                    </td>
-                  </tr>
-                )
-              )}
-            </tbody>
-          </table>
+              <thead>
+                <tr className="border-b border-orca-dourado/30">
+                  <th className="py-2">Nome</th>
+                  <th className="py-2">Data</th>
+                  <th className="py-2">Fotos</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((event) =>
+                  editingId === event.id ? (
+                    <tr key={event.id} className="border-b border-orca-dourado/10">
+                      <td className="py-2">
+                        <input
+                          value={editForm.name}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          className="border rounded px-2 py-1"
+                        />
+                      </td>
+                      <td className="py-2">
+                        <input
+                          type="date"
+                          value={editForm.eventDate}
+                          onChange={(e) => setEditForm({ ...editForm, eventDate: e.target.value })}
+                          className="border rounded px-2 py-1"
+                        />
+                      </td>
+                      <td className="py-2">{event.photoCount}</td>
+                      <td className="py-2 space-x-2">
+                        <Button onClick={() => handleUpdate(event.id)} disabled={submitting}>
+                          Salvar
+                        </Button>
+                        <Button variant="secondary" onClick={() => setEditingId(null)} disabled={submitting}>
+                          Cancelar
+                        </Button>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={event.id} className="border-b border-orca-dourado/10">
+                      <td className="py-2">{event.name}</td>
+                      <td className="py-2">{event.eventDate}</td>
+                      <td className="py-2">{event.photoCount}</td>
+                      <td className="py-2 space-x-2">
+                        <Link href={`/admin/events/${event.id}/upload`} className="text-orca-royal underline">
+                          Subir fotos
+                        </Link>
+                        <Button variant="secondary" onClick={() => startEdit(event)}>
+                          Editar
+                        </Button>
+                        <Button variant="destructive" onClick={() => handleDelete(event.id)} disabled={deletingId === event.id}>
+                          Apagar
+                        </Button>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
           </>
         )}
       </main>
