@@ -11,8 +11,8 @@ const STEPS = [
     text: 'O organizador ou fotógrafo compartilha o link exclusivo do evento com você.',
   },
   {
-    title: '3. Envie uma selfie e encontre suas fotos',
-    text: 'Reconhecimento facial localiza automaticamente todas as fotos com você.',
+    title: '3. Envie uma selfie e localize suas fotos',
+    text: 'Reconhecimento facial identifica automaticamente todas as fotos com você.',
   },
 ]
 

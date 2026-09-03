@@ -10,7 +10,7 @@ describe('HomePage', () => {
 
   it('explains what the product does', () => {
     render(<HomePage />)
-    expect(screen.getByText(/sem precisar procurar/i)).toBeTruthy()
+    expect(screen.getByText(/encontre suas fotos/i)).toBeTruthy()
   })
 
   it('links to the Orca Mídias Instagram', () => {
@@ -23,7 +23,7 @@ describe('HomePage', () => {
     render(<HomePage />)
 
     expect(screen.getByText(/como funciona/i)).toBeTruthy()
-    expect(screen.getByText(/envie uma selfie e encontre suas fotos/i)).toBeTruthy()
+    expect(screen.getByText(/envie uma selfie e localize suas fotos/i)).toBeTruthy()
   })
 
   it('renders the site footer with the company CNPJ', () => {
