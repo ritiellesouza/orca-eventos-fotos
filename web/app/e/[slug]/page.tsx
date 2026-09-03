@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { SelfieUploader } from '@/components/SelfieUploader'
 import { BrandHeader } from '@/components/BrandHeader'
 import { EventBanner } from '@/components/EventBanner'
+import { SiteFooter } from '@/components/SiteFooter'
 import { supabaseAdmin } from '@/lib/supabaseClient'
 
 // Without this, Next.js treats this route as static-if-possible (it only
@@ -25,6 +26,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
       <main className="py-8">
         <SelfieUploader slug={params.slug} eventId={event.id} />
       </main>
+      <SiteFooter />
     </>
   )
 }
