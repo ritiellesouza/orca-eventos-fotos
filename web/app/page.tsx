@@ -44,8 +44,8 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="bg-orca-azul-escuro/5 py-12 px-4">
-          <h2 className="text-2xl font-extrabold text-orca-azul-escuro text-center mb-8">
+        <section aria-labelledby="como-funciona-heading" className="bg-orca-azul-escuro/5 py-12 px-4">
+          <h2 id="como-funciona-heading" className="text-2xl font-extrabold text-orca-azul-escuro text-center mb-8">
             Como funciona
           </h2>
           <div className="max-w-4xl mx-auto grid gap-6 sm:grid-cols-3">
@@ -59,7 +59,7 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-        </div>
+        </section>
       </main>
       <SiteFooter />
     </>
