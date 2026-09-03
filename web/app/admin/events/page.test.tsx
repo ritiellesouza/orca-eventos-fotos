@@ -311,4 +311,13 @@ describe('AdminEventsPage', () => {
     expect((screen.getByLabelText(/^nome$/i) as HTMLInputElement).value).toBe('')
     expect(screen.queryByDisplayValue('Editado sem salvar')).toBeNull()
   })
+
+  it('shows a summary of total events and photos above the table', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(EVENTS_RESPONSE), { status: 200 }))
+
+    render(<AdminEventsPage />)
+
+    await waitFor(() => expect(screen.getByText('Festa Junina')).toBeTruthy())
+    expect(screen.getByText(/1 evento · 42 fotos/i)).toBeTruthy()
+  })
 })

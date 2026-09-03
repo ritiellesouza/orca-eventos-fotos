@@ -226,7 +226,12 @@ export default function AdminEventsPage() {
         {loading ? (
           <p>Carregando...</p>
         ) : (
-          <table className="w-full text-left border-collapse">
+          <>
+            <p className="text-sm text-orca-preto-marca/70 mb-3">
+              {events.length} {events.length === 1 ? 'evento' : 'eventos'} ·{' '}
+              {events.reduce((sum, event) => sum + event.photoCount, 0)} fotos
+            </p>
+            <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-orca-dourado/30">
                 <th className="py-2">Nome</th>
@@ -285,6 +290,7 @@ export default function AdminEventsPage() {
               )}
             </tbody>
           </table>
+          </>
         )}
       </main>
     </>
