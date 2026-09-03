@@ -1,4 +1,5 @@
 import { BrandHeader } from '@/components/BrandHeader'
+import { SiteFooter } from '@/components/SiteFooter'
 import { supabaseAdmin } from '@/lib/supabaseClient'
 import { getSignedDownloadUrl } from '@/lib/storage'
 
@@ -12,6 +13,7 @@ export default async function ObrigadoPage({ searchParams }: { searchParams: { s
           <h1 className="text-2xl font-extrabold text-orca-azul-escuro mb-4">Sessão inválida</h1>
           <p>Sessão inválida.</p>
         </main>
+        <SiteFooter />
       </>
     )
   }
@@ -31,6 +33,7 @@ export default async function ObrigadoPage({ searchParams }: { searchParams: { s
           <h1 className="text-2xl font-extrabold text-orca-azul-escuro mb-4">Aguardando confirmação</h1>
           <p>Pagamento ainda não confirmado. Atualize a página em instantes.</p>
         </main>
+        <SiteFooter />
       </>
     )
   }
@@ -63,6 +66,7 @@ export default async function ObrigadoPage({ searchParams }: { searchParams: { s
         </ul>
         <p className="text-sm text-orca-preto-marca/70 mt-4">Os links expiram em algumas horas.</p>
       </main>
+      <SiteFooter />
     </>
   )
 }
