@@ -1,6 +1,6 @@
 export function SiteFooter() {
   return (
-    <footer className="bg-orca-azul-escuro text-white mt-12 py-8">
+    <footer className="bg-orca-azul-escuro text-white mt-auto pt-12 py-8">
       <div className="max-w-4xl mx-auto px-4 text-center space-y-2">
         <p className="font-extrabold">Orca Mídias</p>
         <p className="text-sm text-white/80">CNPJ 53.731.640/0001-38 · Mairiporã - SP</p>

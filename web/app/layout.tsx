@@ -25,7 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={`${montserrat.variable} ${caveat.variable} font-montserrat antialiased text-orca-preto-marca`}>
+      <body
+        className={`${montserrat.variable} ${caveat.variable} min-h-screen flex flex-col font-montserrat antialiased text-orca-preto-marca`}
+      >
         {children}
       </body>
     </html>
