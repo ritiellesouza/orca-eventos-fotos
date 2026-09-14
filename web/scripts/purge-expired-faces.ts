@@ -17,6 +17,7 @@ export async function purgeExpiredFaces(
 }
 
 if (require.main === module) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { supabaseAdmin } = require('../lib/supabaseClient')
   const db = supabaseAdmin()
 

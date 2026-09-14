@@ -40,7 +40,11 @@ export function EventPageClient({ slug, eventId }: { slug: string; eventId: stri
   }
 
   function selectMany(photoIds: string[]) {
-    setSelected((prev) => new Set([...prev, ...photoIds]))
+    setSelected((prev) => {
+      const next = new Set(prev)
+      photoIds.forEach((id) => next.add(id))
+      return next
+    })
   }
 
   function deselectMany(photoIds: string[]) {
