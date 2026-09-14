@@ -6,18 +6,21 @@ import { createRateLimiter } from '@/lib/rateLimit'
 const DEFAULT_LIMIT = 40
 const MAX_LIMIT = 100
 
-// Read-only listing of already-public preview images -- much cheaper than the
-// selfie-search route (no face inference), but still anonymous and worth a
-// light brake against someone scripting through every page rapidly.
-const limiter = createRateLimiter(60, 60_000)
-
 function clientIp(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for')
   return forwarded?.split(',')[0].trim() || request.headers.get('x-real-ip') || 'unknown'
 }
 
+// Read-only listing of already-public preview images -- much cheaper than the
+// selfie-search route (no face inference), but still anonymous and worth a
+// light brake against someone scripting through every page rapidly.
+function createLimiter() {
+  return createRateLimiter(60, 60_000)
+}
+
 export async function GET(request: NextRequest, { params }: { params: { slug: string } }) {
   const ip = clientIp(request)
+  const limiter = createLimiter()
 
   if (!limiter.allow(ip)) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })

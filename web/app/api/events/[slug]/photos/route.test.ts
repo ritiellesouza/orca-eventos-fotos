@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const mockEventSingle = vi.fn()
-const mockPhotosRange = vi.fn()
+const { mockEventSingle, mockPhotosRange, mockCreateRateLimiter } = vi.hoisted(() => {
+  const mockCreateRateLimiter = vi.fn()
+  mockCreateRateLimiter.mockReturnValue({ allow: () => true })
+  return {
+    mockEventSingle: vi.fn(),
+    mockPhotosRange: vi.fn(),
+    mockCreateRateLimiter,
+  }
+})
 
 vi.mock('@/lib/supabaseClient', () => ({
   supabaseAdmin: () => ({
@@ -23,6 +30,10 @@ vi.mock('@/lib/supabaseClient', () => ({
   }),
 }))
 
+vi.mock('@/lib/rateLimit', () => ({
+  createRateLimiter: mockCreateRateLimiter,
+}))
+
 import { GET } from './route'
 
 const EVENT_ID = '11111111-1111-1111-1111-111111111111'
@@ -35,6 +46,8 @@ describe('GET /api/events/[slug]/photos', () => {
   beforeEach(() => {
     mockEventSingle.mockReset()
     mockPhotosRange.mockReset()
+    mockCreateRateLimiter.mockReset()
+    mockCreateRateLimiter.mockReturnValue({ allow: () => true })
     process.env.NEXT_PUBLIC_R2_PUBLIC_URL = 'https://pub.example.com'
   })
 
@@ -94,5 +107,15 @@ describe('GET /api/events/[slug]/photos', () => {
     const response = await GET(makeRequest(), { params: { slug: 'festa-junina' } })
 
     expect(response.status).toBe(500)
+  })
+
+  it('returns 429 when rate limited', async () => {
+    mockCreateRateLimiter.mockReturnValue({ allow: () => false })
+
+    const response = await GET(makeRequest(), { params: { slug: 'festa-junina' } })
+
+    expect(response.status).toBe(429)
+    const body = await response.json()
+    expect(body).toEqual({ error: 'rate_limited' })
   })
 })
