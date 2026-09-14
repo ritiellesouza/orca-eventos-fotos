@@ -24,6 +24,34 @@ function mockFetchSequence(responses: Array<{ url: RegExp; body: unknown; status
   })
 }
 
+// Like mockFetchSequence, but the /api/checkout call rejects (network
+// failure) instead of resolving -- everything else is served normally.
+function mockFetchSequenceWithCheckoutNetworkFailure(
+  responses: Array<{ url: RegExp; body: unknown; status?: number }>
+) {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = typeof input === 'string' ? input : (input as Request).url
+    if (/\/api\/checkout/.test(url)) {
+      throw new Error('network down')
+    }
+    const match = responses.find((r) => r.url.test(url))
+    if (!match) {
+      throw new Error(`Unexpected fetch: ${url}`)
+    }
+    return new Response(JSON.stringify(match.body), { status: match.status ?? 200 })
+  })
+}
+
+// Renders EventPageClient, waits for the gallery's single photo to load and
+// selects it -- the minimal path (no search flow needed) to reach a
+// non-empty CheckoutBar.
+async function selectOneGalleryPhoto() {
+  render(<EventPageClient slug="festa-junina" eventId={EVENT_ID} />)
+
+  await waitFor(() => expect(screen.getByAltText(/foto 1/i)).toBeTruthy())
+  fireEvent.click(screen.getByAltText(/foto 1/i).closest('button')!)
+}
+
 describe('EventPageClient', () => {
   it('combines a gallery selection and a search-result selection into one checkout bar', async () => {
     mockFetchSequence([
@@ -147,5 +175,80 @@ describe('EventPageClient', () => {
     // The previous search's selection (search-1) is gone, but the gallery
     // selection (gallery-1) must survive.
     await waitFor(() => expect(screen.getByText(/1 foto selecionada/i)).toBeTruthy())
+  })
+})
+
+// Regression coverage for checkout error mapping and the price display
+// guard. This logic used to live in SelfieUploader.test.tsx (before the
+// checkout flow was lifted into EventPageClient in Task 5) and was dropped
+// during that migration without being recreated here.
+describe('EventPageClient checkout error handling', () => {
+  it('shows a specific message when a photo is no longer available, next to the checkout bar', async () => {
+    mockFetchSequence([
+      {
+        url: /\/api\/events\/festa-junina\/photos/,
+        body: { results: [{ photoId: 'gallery-1', previewUrl: 'https://example.com/g1.jpg' }], hasMore: false },
+      },
+      { url: /\/api\/checkout/, body: { error: 'unknown_photo_ids' }, status: 400 },
+    ])
+
+    await selectOneGalleryPhoto()
+    fireEvent.change(screen.getByLabelText(/e-mail/i), { target: { value: 'comprador@example.com' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /comprar/i }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /algumas fotos selecionadas não estão mais disponíveis\. atualize a página e tente de novo\./i
+      )
+    )
+  })
+
+  it('shows a generic message on a network failure, next to the checkout bar', async () => {
+    mockFetchSequenceWithCheckoutNetworkFailure([
+      {
+        url: /\/api\/events\/festa-junina\/photos/,
+        body: { results: [{ photoId: 'gallery-1', previewUrl: 'https://example.com/g1.jpg' }], hasMore: false },
+      },
+    ])
+
+    await selectOneGalleryPhoto()
+    fireEvent.change(screen.getByLabelText(/e-mail/i), { target: { value: 'comprador@example.com' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /comprar/i }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(/erro ao iniciar pagamento\. tente novamente\./i)
+    )
+  })
+
+  it('shows the total price next to the photo count when the price env var is set', async () => {
+    process.env.NEXT_PUBLIC_PHOTO_PRICE_CENTS = '1500'
+
+    mockFetchSequence([
+      {
+        url: /\/api\/events\/festa-junina\/photos/,
+        body: { results: [{ photoId: 'gallery-1', previewUrl: 'https://example.com/g1.jpg' }], hasMore: false },
+      },
+    ])
+
+    await selectOneGalleryPhoto()
+
+    expect(screen.getByText(/1 foto selecionada/i)).toBeTruthy()
+    expect(screen.getByText(/R\$/)).toBeTruthy()
+  })
+
+  it('shows the photo count without a total when the price env var is unset', async () => {
+    mockFetchSequence([
+      {
+        url: /\/api\/events\/festa-junina\/photos/,
+        body: { results: [{ photoId: 'gallery-1', previewUrl: 'https://example.com/g1.jpg' }], hasMore: false },
+      },
+    ])
+
+    await selectOneGalleryPhoto()
+
+    expect(screen.getByText(/1 foto selecionada/i)).toBeTruthy()
+    expect(screen.queryByText(/R\$/)).toBeNull()
   })
 })
