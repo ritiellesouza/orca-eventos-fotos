@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { SelfieUploader } from '@/components/SelfieUploader'
+import { EventPageClient } from '@/components/EventPageClient'
 import { BrandHeader } from '@/components/BrandHeader'
 import { EventBanner } from '@/components/EventBanner'
 import { SiteFooter } from '@/components/SiteFooter'
@@ -24,7 +24,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
       <BrandHeader />
       <EventBanner eventName={event.name} />
       <main className="py-8">
-        <SelfieUploader slug={params.slug} eventId={event.id} />
+        <EventPageClient slug={params.slug} eventId={event.id} />
       </main>
       <SiteFooter />
     </>
