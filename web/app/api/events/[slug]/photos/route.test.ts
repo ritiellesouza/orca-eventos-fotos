@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockEventSingle, mockPhotosRange, mockCreateRateLimiter } = vi.hoisted(() => {
-  const mockCreateRateLimiter = vi.fn()
-  mockCreateRateLimiter.mockReturnValue({ allow: () => true })
+const { mockEventSingle, mockPhotosRange, mockCreateRateLimiter, limiterState } = vi.hoisted(() => {
+  const limiterState = { allow: vi.fn(() => true) }
+  const mockCreateRateLimiter = vi.fn(() => limiterState)
   return {
     mockEventSingle: vi.fn(),
     mockPhotosRange: vi.fn(),
     mockCreateRateLimiter,
+    limiterState,
   }
 })
 
@@ -46,8 +47,7 @@ describe('GET /api/events/[slug]/photos', () => {
   beforeEach(() => {
     mockEventSingle.mockReset()
     mockPhotosRange.mockReset()
-    mockCreateRateLimiter.mockReset()
-    mockCreateRateLimiter.mockReturnValue({ allow: () => true })
+    limiterState.allow = vi.fn(() => true)
     process.env.NEXT_PUBLIC_R2_PUBLIC_URL = 'https://pub.example.com'
   })
 
@@ -110,7 +110,7 @@ describe('GET /api/events/[slug]/photos', () => {
   })
 
   it('returns 429 when rate limited', async () => {
-    mockCreateRateLimiter.mockReturnValue({ allow: () => false })
+    limiterState.allow = vi.fn(() => false)
 
     const response = await GET(makeRequest(), { params: { slug: 'festa-junina' } })
 
